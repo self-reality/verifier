@@ -22,7 +22,7 @@ Client‑side, ~$1 on‑chain proof‑of‑existence for any file. Your file nev
 2. Upload/drag‑drop a file.
 3. Browser computes file hash and the IPFS CID (same as if uploaded to IPFS).
 4. User connects wallet (if not already connected).
-5. User edits display filename if desired (with length limit) in Certificate Preview. The NFT `name` will be this filename.
+5. User edits display filename if desired (with length limit) in Certificate Preview. The app normalizes to a `slugFilename` on upload and during input (lowercase; allowed `a-z 0-9 - _ .`; disallowed chars → `-`; collapse multiple `-`; trim leading/trailing `-` and `.`; preserve last extension; `~` forbidden). The NFT `name` equals this `slugFilename`.
 6. User clicks “Verify”.
 7. Transaction is sent to a single contract address (consistent across supported networks).
 8. As soon as the transaction hash is available, generate the PDF report.
@@ -38,7 +38,7 @@ Client‑side, ~$1 on‑chain proof‑of‑existence for any file. Your file nev
 ### Functional Requirements
 - Client‑side hashing of the entire file in a streaming/chunked manner with progress.
 - Client‑side IPFS CID computation matching official IPFS behavior for the given hash function and chunking parameters.
-- Filename edit with enforced max length compatible with on‑chain storage constraints. The NFT `name` equals the (possibly edited) filename.
+- Filename edit with enforced max length compatible with on-chain storage constraints. Input is normalized to `slugFilename` everywhere; the NFT `name` equals the (possibly edited) `slugFilename`.
 - Single NFT mint function on a contract address common across networks (chain routing handled internally).
 - Immediate PDF generation once tx hash is known; update status to “confirmed” once mined.
 - QR codes: one embedded in NFT image (instructions) and one in PDF (explorer link).
@@ -52,12 +52,12 @@ Client‑side, ~$1 on‑chain proof‑of‑existence for any file. Your file nev
   - File hash (exact algorithm and parameters documented below)
   - Image: contains a QR linking to the token `external_url`
   - Name: equal to the filename
-  - `external_url`: `https://mysite.com/[Filename-and-CID-unique_token_link]`
+  - `external_url`: `https://mysite.com/[slug]`
 - Image content guidelines:
   - Prominent filename, IPFS CID, and file hash
   - Clear QR with short URL to instructions
-- Thumbnail delivery: wallets fetch `image` and metadata from a CDN‑backed endpoint (Cloudflare Worker). The service derives content from the deterministic tokenURI slug (computed from filename + CID); no user files are stored.
-  - tokenURI: `https://metadata.mysite.com/[Filename-and-CID-unique_token_link]`
+- Thumbnail delivery: wallets fetch `image` and metadata from a CDN‑backed endpoint (Cloudflare Worker). The service derives content from the deterministic tokenURI slug `slugFilename~cid` (with CIDv1 base32 lowercase); no user files are stored.
+  - tokenURI: `https://metadata.mysite.com/[slug]`
 
 ### PDF Report Specification
 - Contents:

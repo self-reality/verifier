@@ -15,16 +15,17 @@ Privacy-preserving, client-only file hashing and CID computation with a single o
    - Crypto + IPFS in-browser:
      - File hashing via Web Crypto API with chunked streaming and progress.
      - Deterministic IPFS CID (e.g., `multiformats`, `ipfs-unixfs`) matching official IPFS behavior.
-   - Certificate UI: editable display filename (length-limited), show hash and CID. NFT `name` is set to this filename at mint time.
+   - Certificate UI: editable display filename (length-limited), show hash and CID. NFT `name` is set to this `slugFilename` at mint time.
+   - Filename normalization: on upload and during input, the app derives a `slugFilename` used everywhere. Rules: lowercase; allowed chars `a-z 0-9 - _ .`; replace disallowed chars (including spaces) with `-`;  trim leading/trailing `-` and `.`; preserve extension; forbid `~` (reserved as slug separator).
    - PDF generation: client-side (e.g., `pdf-lib`), include QR to explorer link.
    - QR codes: client-side generation (e.g., `qrcode`/`qrcode.react`).
    - No file uploads; only derived data (hash, CID, tx hash) are shown/stored on-chain.
 
 2) **Smart Contract(s) — EVM**
    - Contract: `VerifierCertificate` (ERC-721 transferable).
-   - Function: `mint` stores/anchors (file hash, IPFS CID, filename-as-name) and emits an event; token IDs are incremental (standard). A deterministic slug is computed on-chain from `filename + CID` to derive the tokenURI.
+   - Function: `mint` stores/anchors (file hash, IPFS CID, filename-as-name) and emits an event; token IDs are incremental (standard). A deterministic slug `slugFilename~cid` (where `cid` is CIDv1 base32 lowercase) is computed from the normalized `slugFilename` and the CID to derive the tokenURI.
    - Addressing pattern: Deterministic deployment via CREATE2 to reuse the same address across networks.
-   - Metadata: `tokenURI` is deterministic and points to `https://metadata.mysite.com/[Filename-and-CID-unique_token_link]`. `external_url` is `https://mysite.com/[Filename-and-CID-unique_token_link]`. The image includes a QR code linking to the same `external_url`.
+   - Metadata: `tokenURI` is deterministic and points to `https://metadata.mysite.com/[slug]`. `external_url` is `https://mysite.com/[slug]`. The image includes a QR code linking to the same `external_url`.
    - Networks: Base as primary; other popular low-fee EVM networks (e.g., Polygon PoS, Arbitrum, Optimism) selectable.
 
 3) **Ethereum Node Service (Read/Write RPC)**
