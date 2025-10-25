@@ -15,16 +15,16 @@ Privacy-preserving, client-only file hashing and CID computation with a single o
    - Crypto + IPFS in-browser:
      - File hashing via Web Crypto API with chunked streaming and progress.
      - Deterministic IPFS CID (e.g., `multiformats`, `ipfs-unixfs`) matching official IPFS behavior.
-   - Certificate UI: editable display filename (length-limited), show hash and CID.
+   - Certificate UI: editable display filename (length-limited), show hash and CID. NFT `name` is set to this filename at mint time.
    - PDF generation: client-side (e.g., `pdf-lib`), include QR to explorer link.
    - QR codes: client-side generation (e.g., `qrcode`/`qrcode.react`).
    - No file uploads; only derived data (hash, CID, tx hash) are shown/stored on-chain.
 
 2) **Smart Contract(s) — EVM**
    - Contract: `VerifierCertificate` (ERC-721 transferable).
-   - Function: `mint` stores/anchors (file hash, optional IPFS CID, display name) and emits an event; minimal persistent storage to optimize gas.
+   - Function: `mint` stores/anchors (file hash, IPFS CID, filename-as-name) and emits an event; token IDs are incremental (standard). A deterministic slug is computed on-chain from `filename + CID` to derive the tokenURI.
    - Addressing pattern: Deterministic deployment via CREATE2 to reuse the same address across networks.
-   - Metadata: `tokenURI` may encode on-chain data; image includes QR to instructions.
+   - Metadata: `tokenURI` is deterministic and points to `https://metadata.mysite.com/[Filename-and-CID-unique_token_link]`. `external_url` is `https://mysite.com/[Filename-and-CID-unique_token_link]`. The image includes a QR code linking to the same `external_url`.
    - Networks: Base as primary; other popular low-fee EVM networks (e.g., Polygon PoS, Arbitrum, Optimism) selectable.
 
 3) **Ethereum Node Service (Read/Write RPC)**
@@ -47,11 +47,11 @@ Privacy-preserving, client-only file hashing and CID computation with a single o
    - Privacy: No user data; only public market data.
 
 6) **NFT Metadata & Thumbnail Service**
-   - Purpose: Serve wallet‑friendly metadata JSON and a deterministic thumbnail image for each token so wallets display a clean preview.
-   - Implementation: Cloudflare Worker (or Pages Function) that reads on‑chain data via public RPC, constructs ERC‑721 metadata (`name`, `description`, `image`, `attributes`) and serves a PNG‑8 image with QR/information.
+   - Purpose: Serve wallet‑friendly metadata JSON and a deterministic thumbnail image so wallets display a clean preview.
+   - Implementation: Cloudflare Worker (or Pages Function) that constructs ERC‑721 metadata from the tokenURI slug alone (derived from `filename + CID`), and serves a PNG‑8 image that displays the filename, CID, and a QR to the `external_url`. No user files are stored or required.
    - Endpoints:
-     - `GET /nft/:chainId/:tokenId/metadata.json`
-     - `GET /nft/:chainId/:tokenId/image.png`
+     - `GET https://metadata.mysite.com/:slug` → metadata JSON
+     - `GET https://metadata.mysite.com/:slug/image.png` → PNG‑8 image
    - Caching: CDN cache by URL with revalidation; purge on mint or use short TTL.
    - Format: PNG‑8 only; SVG is not served for compatibility and security consistency.
    - Storage (optional): R2/KV for image render cache; no user files stored.
@@ -96,6 +96,7 @@ Cloudflare Pages          NFT Metadata & Thumbnail
 - `multiformats`, `ipfs-unixfs` (CID computation), Web Crypto API for hashing with Web Workers.
 - `pdf-lib` (PDF), `qrcode` (QR), `zod` (validation), `zustand` or `redux` (minimal state where needed).
 - Price estimation: client fetches from Price Feed Worker (with fallback to direct public APIs if Worker unavailable).
+ - NFT preview image is generated client‑side using the same functions/libs as the Worker to ensure parity with the on‑chain/served image.
 
 ### Smart Contract Notes
 - Keep on-chain storage minimal; rely on events for detailed audit trail.
