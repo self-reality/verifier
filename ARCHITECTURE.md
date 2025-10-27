@@ -42,9 +42,9 @@ Privacy-preserving, client-only file hashing and CID computation with a single o
    - Security: WAF, bot mitigation where appropriate; Turnstile on critical forms if ever added.
 
 5) **Price Feed Service**
-   - Purpose: Convert a fixed USD amount (e.g., $1 service fee) into the current network token amount and provide live USD estimates for gas and total cost.
-   - Implementation: Cloudflare Worker that fetches and caches token prices from public market APIs with short TTL (30–60s), CDN‑cached. Optional on‑chain fallback via Chainlink feeds if needed later.
-   - API: `GET /api/price?chainId=...&symbol=...` → `{ priceUsd, updatedAt }`; and `GET /api/usd-to-amount?usd=1&chainId=...` → `{ amountWei }` for the native gas token.
+   - Purpose: Convert USD amounts to native token amounts for supported networks.
+   - Implementation: Cloudflare Worker that fetches and caches native token prices from public market APIs with configurable TTL (default 1 hour), CDN‑cached. Optional on‑chain fallback via Chainlink feeds if needed later.
+   - API: `GET /api/usd-to-amount?usd=1&chainId=8453` → `{ amountWei }` for the native token amount.
    - Privacy: No user data; only public market data.
 
 6) **NFT Metadata & Thumbnail Service**
@@ -60,7 +60,7 @@ Privacy-preserving, client-only file hashing and CID computation with a single o
 ### End-to-End Flow
 1. User opens the app (served via Cloudflare Pages/CDN).
 2. User drops a file; browser streams/chunks to compute file hash and IPFS CID with progress.
-3. User connects a wallet; app queries Price Feed to estimate gas, show USD total, and compute the $1 equivalent token amount (if a protocol fee applies).
+3. User connects a wallet; app queries Price Feed to compute the $1 equivalent token amount (if a protocol fee applies).
 4. User clicks Verify; dapp calls contract `mint` via wallet provider.
 5. As soon as tx hash is available, the app generates a PDF report (includes wallet, network, filename, hash derived from CID, CID, tx hash, explorer link, QR).
 6. App waits for confirmation via RPC; on success shows certificate state and download links. Wallets and explorers fetch metadata/thumbnail from the NFT service.
@@ -96,7 +96,7 @@ Cloudflare Pages          NFT Metadata & Thumbnail
 - `wagmi` + `viem` (wallets, chain calls), WalletConnect, MetaMask.
 - `multiformats`, `ipfs-unixfs` (CID computation), Web Crypto API for hashing with Web Workers.
 - `pdf-lib` (PDF), `qrcode` (QR), `zod` (validation), `zustand` or `redux` (minimal state where needed).
-- Price estimation: client fetches from Price Feed Worker (with fallback to direct public APIs if Worker unavailable).
+- USD to token conversion: client fetches from Price Feed Worker (with fallback to direct public APIs if Worker unavailable).
  - NFT preview image is generated client‑side using the same functions/libs as the Worker to ensure parity with the on‑chain/served image.
 
 ### Cryptographic & IPFS Details

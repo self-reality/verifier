@@ -22,7 +22,7 @@ Scope:
 Deliverables:
 - Directory layout: `workers/price-feed`, `contracts/registry`, `web/`.
 - CI: build, lint, test on PRs; deploy previews for `workers` and `web`.
-- Wrangler setup for Workers, Hardhat/Foundry for contracts, Next.js/Vite for web.
+- Wrangler setup for Workers, Hardhat for contracts, Next.js for web.
 
 Verification:
 - CI passes on an empty scaffold; `wrangler dev` runs locally; `hardhat test` runs.
@@ -30,17 +30,16 @@ Verification:
 ---
 
 ## Milestone 1 — Price Feed Service (Cloudflare Worker)
-Goal: Provide cached USD price for the native token and helper conversion for UI.
+Goal: Convert USD amounts to native token amounts for supported networks.
 
 Scope:
-- Worker with two endpoints (CDN‑cached 30–60s):
-  - `GET /api/price?chainId=...&symbol=...` → `{ priceUsd, updatedAt }`
-  - `GET /api/usd-to-amount?usd=1&chainId=...` → `{ amountWei }`
+- Worker with single endpoint (CDN‑cached with configurable TTL, default 1 hour):
+  - `GET /api/usd-to-amount?usd=1&chainId=8453` → `{ amountWei }` for the native token amount.
 - Upstream(s): public market APIs; configurable via env; graceful fallback; basic rate limiting.
 - Observability: request logs; simple health endpoint `GET /health`.
 
 Deliverables:
-- Deployed Worker URL (e.g., `https://price.<your-domain>/api/...`).
+- Deployed Worker URL (e.g., `https://price.<your-domain>/api/usd-to-amount`).
 - Short README with expected query params and response schema.
 
 Verification (must pass before M2):
@@ -81,7 +80,7 @@ Scope:
   - Chunked hashing with Web Crypto API and progress.
   - Deterministic IPFS CID computation matching official behavior.
 - Filename normalization: `slugFilename` rules (lowercase, `a-z 0-9 - _ .`, collapse `-`, trim `-`/`.`, preserve extension, forbid `~`).
-- Price UI: fetch from Price Feed Worker; show USD estimate and equivalent native token for optional fee (fee can be 0 in MVP).
+- Price UI: fetch from Price Feed Worker to convert USD to native token amount for optional fee (fee can be 0 in MVP).
 - Transaction: call `registry.anchor(cid, slugFilename)`; track pending → mined; show explorer link.
 - PDF (minimum viable): generate a simple client‑side PDF receipt with wallet, network, `filename`, `CID`, tx hash, QR to explorer.
 
