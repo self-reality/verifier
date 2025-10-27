@@ -99,6 +99,11 @@ Cloudflare Pages          NFT Metadata & Thumbnail
 - Price estimation: client fetches from Price Feed Worker (with fallback to direct public APIs if Worker unavailable).
  - NFT preview image is generated client‑side using the same functions/libs as the Worker to ensure parity with the on‑chain/served image.
 
+### Cryptographic & IPFS Details
+- Hash algorithm: to be finalized (e.g., SHA‑256); parameters must be documented in‑app and in the report.
+- IPFS CID computation: specify chunking strategy and multihash so the CID matches official IPFS.
+- Determinism: identical input file must yield identical hash and CID in the browser and via standard tools.
+
 ### Smart Contract Notes
 - Keep on-chain storage minimal; rely on events for detailed audit trail.
 - Use ERC-721 transferable tokens.
