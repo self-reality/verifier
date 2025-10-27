@@ -15,15 +15,15 @@ Privacy-preserving, client-only file hashing and CID computation with a single o
    - Crypto + IPFS in-browser:
      - File hashing via Web Crypto API with chunked streaming and progress.
      - Deterministic IPFS CID (e.g., `multiformats`, `ipfs-unixfs`) matching official IPFS behavior.
-   - Certificate UI: editable display filename (length-limited), show hash and CID. NFT `name` is set to this `slugFilename` at mint time.
+   - Certificate UI: editable display filename (length-limited), show hash (derived from CID) and CID. NFT `name` is set to this `slugFilename` at mint time.
    - Filename normalization: on upload and during input, the app derives a `slugFilename` used everywhere. Rules: lowercase; allowed chars `a-z 0-9 - _ .`; replace disallowed chars (including spaces) with `-`;  trim leading/trailing `-` and `.`; preserve extension; forbid `~` (reserved as slug separator).
    - PDF generation: client-side (e.g., `pdf-lib`), include QR to explorer link.
    - QR codes: client-side generation (e.g., `qrcode`/`qrcode.react`).
-   - No file uploads; only derived data (hash, CID, tx hash) are shown/stored on-chain.
+   - No file uploads; only derived data (CID, tx hash) are stored on-chain. Hash is derived from CID when needed.
 
 2) **Smart Contract(s) — EVM**
    - Contract: `VerifierCertificate` (ERC-721 transferable).
-   - Function: `mint` stores/anchors (file hash, IPFS CID, filename-as-name) and emits an event; token IDs are incremental (standard). A deterministic slug `slugFilename~cid` (where `cid` is CIDv1 base32 lowercase) is computed from the normalized `slugFilename` and the CID to derive the tokenURI.
+   - Function: `mint` stores/anchors (IPFS CID as string, filename as string) and emits an event; token IDs are incremental (standard). A deterministic slug `slugFilename~cid` (where `cid` is CIDv1 base32 lowercase) is computed from the normalized `slugFilename` and the CID to derive the tokenURI. File hash can be derived from the CID when needed.
    - Addressing pattern: Deterministic deployment via CREATE2 to reuse the same address across networks.
    - Metadata: `tokenURI` is deterministic and points to `https://metadata.mysite.com/[slug]`. `external_url` is `https://mysite.com/[slug]`. The image includes a QR code linking to the same `external_url`.
    - Networks: Base as primary; other popular low-fee EVM networks (e.g., Polygon PoS, Arbitrum, Optimism) selectable.
@@ -62,7 +62,7 @@ Privacy-preserving, client-only file hashing and CID computation with a single o
 2. User drops a file; browser streams/chunks to compute file hash and IPFS CID with progress.
 3. User connects a wallet; app queries Price Feed to estimate gas, show USD total, and compute the $1 equivalent token amount (if a protocol fee applies).
 4. User clicks Verify; dapp calls contract `mint` via wallet provider.
-5. As soon as tx hash is available, the app generates a PDF report (includes wallet, network, filename, hash, CID, tx hash, explorer link, QR).
+5. As soon as tx hash is available, the app generates a PDF report (includes wallet, network, filename, hash derived from CID, CID, tx hash, explorer link, QR).
 6. App waits for confirmation via RPC; on success shows certificate state and download links. Wallets and explorers fetch metadata/thumbnail from the NFT service.
 
 ```text
@@ -119,7 +119,7 @@ Cloudflare Pages          NFT Metadata & Thumbnail
 - Environments: `dev` (testnets), `staging`, `prod` (main low-fee network). Feature flags via static config.
 
 ### Security & Privacy
-- No file uploads, no server-side storage. Only derived values (hash, CID, tx hash) are used.
+- No file uploads, no server-side storage. Only derived values (CID, tx hash) are stored on-chain. Hash is derived from CID when needed.
 - Verified explorer links and chain IDs to prevent spoofing.
 - Clear disclaimers: proof-of-existence only; users must store files themselves.
 - Workers serve only public market data (Price Feed) and derived on-chain metadata/images (NFT service); no user files or PII are processed.
