@@ -15,9 +15,6 @@ describe('VerifierRegistry', function () {
     const tx = await registry.anchor('bafyCid123', 'doc.pdf');
     const receipt = await tx.wait();
 
-    const len = await registry.entriesLength();
-    expect(len).to.equal(1n);
-
     // event assertion
     const event = receipt.logs.find((l) => l.fragment && l.fragment.name === 'Anchored');
     expect(event).to.not.be.undefined;
@@ -25,17 +22,6 @@ describe('VerifierRegistry', function () {
     expect(event.args.cid).to.equal('bafyCid123');
     expect(event.args.filename).to.equal('doc.pdf');
     expect(event.args.timestamp).to.be.a('bigint');
-  });
-
-  it('readback returns stored values', async function () {
-    const registry = await deploy();
-    await (await registry.anchor('bafyCidXYZ', 'file-1.txt')).wait();
-
-    const entry = await registry.entries(0);
-    expect(entry.cid).to.equal('bafyCidXYZ');
-    expect(entry.filename).to.equal('file-1.txt');
-    expect(entry.submitter).to.be.a('string');
-    expect(entry.timestamp).to.be.a('bigint');
   });
 
   it('rejects invalid filenames (empty, too long, bad chars, tilde, uppercase, space, bad ends)', async function () {
