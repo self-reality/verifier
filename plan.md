@@ -37,6 +37,7 @@ Scope:
   - `GET /api/usd-to-amount?usd=1&chainId=8453` → `{ amountWei }` for the native token amount.
 - Upstream(s): public market APIs; configurable via env; graceful fallback; basic rate limiting.
 - Observability: request logs; simple health endpoint `GET /health`.
+ - Access control: CORS allowlist (our domain only); optional API key whitelist; no public `workers.dev`.
 
 Deliverables:
 - Deployed Worker URL (e.g., `https://price.<your-domain>/api/usd-to-amount`).
