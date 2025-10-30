@@ -11,7 +11,9 @@ module.exports = {
   gasReporter: {
     enabled: true,
     currency: 'USD',
-    coinmarketcap: process.env.CMC_API_KEY || undefined,
+    token: "ETH",
+    ethPrice: 4000,
+    gasPrice: 100,
     excludeContracts: [],
     showTimeSpent: true,
   },
