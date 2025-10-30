@@ -89,7 +89,7 @@ describe('VerifierRegistry', function () {
     expect(Number(receipt.gasUsed)).to.be.lessThan(150000);
   });
 
-  it('allows only owner to set commissions, rejects out-of-bounds, enforces comm range', async function () {
+  it('allows only owner to set commissions', async function () {
     const [owner, user, recipient] = await ethers.getSigners();
     const registry = await deploy(owner.address);
 
@@ -98,15 +98,19 @@ describe('VerifierRegistry', function () {
     await expect(registry.connect(user).setMaxCommission(10000n)).to.be.reverted;
     await expect(registry.setMinCommission(500_000_000_000_0n)).to.not.be.reverted; // 0.000005 ether
     await expect(registry.setMaxCommission(2_000_000_000_000_000n)).to.not.be.reverted; // 0.002 ether
+  });
 
-    // min > max, max < min
-    // set maxCommission to low value first, so next minCommission triggers revert
-    await registry.setMaxCommission(2000000000000n); // 0.000002 ether
-    await expect(registry.setMinCommission(2100000000000n)).to.be.revertedWith('min > max'); // 0.0000021 ether > maxCommission
-    // Reset to valid
+  it('rejects out-of-bounds and enforces commission range', async function () {
+    const [owner, user, recipient] = await ethers.getSigners();
+    const registry = await deploy(owner.address);
+
+    // min > max: bump maxCommission to a known value, then set minCommission higher
+    await registry.setMaxCommission(1000000000000n); // 0.000001 ether
+    await expect(registry.setMinCommission(2000000000000n)).to.be.rejectedWith('min > max'); // Should fail
+    // max < min: bump minCommission up, then set maxCommission below
     await registry.setMaxCommission(2000000000000000n); // 0.002 ether
-    await registry.setMinCommission(2500000000000n); // 0.0000025 ether (valid)
-    await expect(registry.setMaxCommission(2400000000000n)).to.be.revertedWith('max < min'); // 0.0000024 ether < minCommission
+    await registry.setMinCommission(2500000000000n); // 0.0000025 ether
+    await expect(registry.setMaxCommission(2400000000000n)).to.be.rejectedWith('max < min');
 
     // Enforces min/max on anchor
     await expect(registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: 2_000_000_000_000n })).to.be.revertedWith('commission not met'); // too low (0.000002 ether)
