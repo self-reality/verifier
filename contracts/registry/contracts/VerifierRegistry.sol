@@ -14,6 +14,7 @@ contract VerifierRegistry {
     Entry[] public entries;
 
     function anchor(string calldata cid, string calldata filename) external {
+        _validateFilename(filename);
         entries.push(Entry({
             submitter: msg.sender,
             cid: cid,
@@ -25,6 +26,31 @@ contract VerifierRegistry {
 
     function entriesLength() external view returns (uint256) {
         return entries.length;
+    }
+
+    function _validateFilename(string calldata filename) internal pure {
+        bytes memory b = bytes(filename);
+        uint256 len = b.length;
+        require(len > 0, "filename empty");
+        require(len <= 128, "filename too long");
+        // Allowed: lowercase a-z, 0-9, '-', '_', '.'
+        // Disallowed: '~', spaces, uppercase letters, other symbols
+        for (uint256 i = 0; i < len; i++) {
+            bytes1 c = b[i];
+            if (
+                (c >= 0x61 && c <= 0x7A) || // a-z
+                (c >= 0x30 && c <= 0x39) || // 0-9
+                c == 0x2D || // '-'
+                c == 0x5F || // '_'
+                c == 0x2E // '.'
+            ) {
+                continue;
+            }
+            revert("filename invalid char");
+        }
+        // additional simple constraints: no leading/trailing '-' or '.'
+        require(b[0] != 0x2D && b[0] != 0x2E, "filename bad start");
+        require(b[len - 1] != 0x2D && b[len - 1] != 0x2E, "filename bad end");
     }
 }
 
