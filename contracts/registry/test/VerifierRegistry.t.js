@@ -94,24 +94,19 @@ describe('VerifierRegistry', function () {
     const registry = await deploy(owner.address);
 
     // Only owner can set
-    await expect(registry.connect(user).setMinCommission(1000n)).to.be.reverted;
-    await expect(registry.connect(user).setMaxCommission(10000n)).to.be.reverted;
-    await expect(registry.setMinCommission(500_000_000_000_0n)).to.not.be.reverted; // 0.000005 ether
-    await expect(registry.setMaxCommission(2_000_000_000_000_000n)).to.not.be.reverted; // 0.002 ether
+    await expect(registry.connect(user).setCommissionRange(500_000_000_000_0n, 2_000_000_000_000_000n)).to.be.reverted;
+    await expect(registry.setCommissionRange(500_000_000_000_0n, 2_000_000_000_000_000n)).to.not.be.reverted; // 0.000005 to 0.002 ether
   });
 
   it('rejects out-of-bounds and enforces commission range', async function () {
     const [owner, user, recipient] = await ethers.getSigners();
     const registry = await deploy(owner.address);
 
-    // min > max: set min lower, then bump maxCommission down, then set minCommission higher
-    await registry.setMinCommission(0n); // Allow setting maxCommission very low
-    await registry.setMaxCommission(1000000000000n); // 0.000001 ether
-    await expect(registry.setMinCommission(2000000000000n)).to.be.revertedWith('commission bounds: min > max'); // Should fail
-    // max < min: bump minCommission up, then set maxCommission below
-    await registry.setMaxCommission(2000000000000000n); // 0.002 ether
-    await registry.setMinCommission(2500000000000n); // 0.0000025 ether
-    await expect(registry.setMaxCommission(2400000000000n)).to.be.revertedWith('commission bounds: max < min');
+    // min > max should revert
+    await expect(registry.setCommissionRange(2_000_000_000_000n, 1_000_000_000_000n)).to.be.revertedWith('commission bounds: min > max');
+
+    // set a valid range
+    await registry.setCommissionRange(2_500_000_000_000n, 2_000_000_000_000_000n); // 0.0000025 to 0.002 ether
 
     // Enforces min/max on anchor
     await expect(registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: 2_000_000_000_000n })).to.be.revertedWith('commission not met'); // too low (0.000002 ether)
