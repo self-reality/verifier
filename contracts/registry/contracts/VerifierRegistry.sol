@@ -12,12 +12,12 @@ contract VerifierRegistry is Ownable {
     uint256 public maxCommission = 0.0013 ether; // $5 at ETHUSD 4000
 
     function setMinCommission(uint256 _minCommission) external onlyOwner {
-        require(_minCommission <= maxCommission, "min > max");
+        require(_minCommission <= maxCommission, "commission bounds: min > max");
         minCommission = _minCommission;
     }
 
     function setMaxCommission(uint256 _maxCommission) external onlyOwner {
-        require(_maxCommission >= minCommission, "max < min");
+        require(_maxCommission >= minCommission, "commission bounds: max < min");
         maxCommission = _maxCommission;
     }
 

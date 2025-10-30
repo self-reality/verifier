@@ -104,13 +104,14 @@ describe('VerifierRegistry', function () {
     const [owner, user, recipient] = await ethers.getSigners();
     const registry = await deploy(owner.address);
 
-    // min > max: bump maxCommission to a known value, then set minCommission higher
+    // min > max: set min lower, then bump maxCommission down, then set minCommission higher
+    await registry.setMinCommission(0n); // Allow setting maxCommission very low
     await registry.setMaxCommission(1000000000000n); // 0.000001 ether
-    await expect(registry.setMinCommission(2000000000000n)).to.be.rejectedWith('min > max'); // Should fail
+    await expect(registry.setMinCommission(2000000000000n)).to.be.revertedWith('commission bounds: min > max'); // Should fail
     // max < min: bump minCommission up, then set maxCommission below
     await registry.setMaxCommission(2000000000000000n); // 0.002 ether
     await registry.setMinCommission(2500000000000n); // 0.0000025 ether
-    await expect(registry.setMaxCommission(2400000000000n)).to.be.rejectedWith('max < min');
+    await expect(registry.setMaxCommission(2400000000000n)).to.be.revertedWith('commission bounds: max < min');
 
     // Enforces min/max on anchor
     await expect(registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: 2_000_000_000_000n })).to.be.revertedWith('commission not met'); // too low (0.000002 ether)
