@@ -30,3 +30,4 @@ artifacts/
 
 
 .npm-cache/
+.vscode/settings.json
