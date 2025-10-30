@@ -8,7 +8,7 @@ Structure
 - `registry/contracts/VerifierRegistry.sol`: Core registry contract.
 - `registry/scripts/deploy.js`: Deployment script.
 - `registry/test/VerifierRegistry.t.js`: Test suite.
-- `registry/addresses.json`: Last deployed addresses by network.
+- `registry/constants.json`: Last deployed addresses by network.
 - `registry/hardhat.config.js`: Hardhat configuration.
 
 Requirements
@@ -47,11 +47,28 @@ export PRIVATE_KEY="0x..."
 ```
 pnpm hardhat run scripts/deploy.js --network <networkName>
 ```
-3) The script will update `registry/addresses.json` with the deployed address.
+3) The script will update `registry/constants.json` with the deployed address.
 
 Notes
-- Use `addresses.json` as the single source of truth for frontends and workers.
+- Use `constants.json` as the single source of truth for frontends and workers.
 - Review `hardhat.config.js` for configured networks and compiler settings.
 - For reproducible installs, prefer `pnpm` as used across the repo.
 
+
+## constants.json Schema Example
+
+```
+{
+  "sepolia": {
+    "address": "0x...",
+    "chainId": 11155111,
+    "deployedAt": "2024-07-01T11:11:00.000Z",
+    "config": {
+      "minCommission": "2500000000000",
+      "maxCommission": "1300000000000000",
+      "owner": "0x0123...4567"
+    }
+  }
+}
+```
 

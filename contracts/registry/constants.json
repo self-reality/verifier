@@ -1,0 +1,10 @@
+{
+  "exampleNetwork": {
+    "address": "",
+    "config": {
+      "minCommission": "0",
+      "maxCommission": "0",
+      "owner": "0x0000000000000000000000000000000000000000"
+    }
+  }
+}

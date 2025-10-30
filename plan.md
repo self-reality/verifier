@@ -59,7 +59,7 @@ Scope:
   - Entry model: `submitter`, `cid`, `filename`, `timestamp`. Keep storage minimal.
   - Event: `Anchored(address indexed submitter, string cid, string filename, uint256 timestamp)`.
 - Tests: happy path, gas bounds, input validation (length/format for filename), reentrancy non‑issue.
-- Deployment script to Base Sepolia; record address in `contracts/addresses.json`.
+- Deployment script to Base Sepolia; record address in `contracts/registry/constants.json`.
 
 Deliverables:
 - Contract repo with unit tests and gas report.
