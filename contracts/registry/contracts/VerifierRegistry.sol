@@ -6,12 +6,31 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract VerifierRegistry is Ownable {
     constructor(address initialOwner) Ownable(initialOwner) {}
 
-    event Anchored(address indexed submitter, string cid, string filename, uint256 timestamp);
+    event Anchored(address indexed submitter, string cid, string filename, uint256 timestamp, uint256 paid);
 
-    function anchor(string calldata cid, string calldata filename) external {
+    uint256 public minCommission = 0.0000025 ether; // 1 cent at ETHUSD 4000
+    uint256 public maxCommission = 0.0013 ether; // $5 at ETHUSD 4000
+
+    function setMinCommission(uint256 _minCommission) external onlyOwner {
+        require(_minCommission <= maxCommission, "min > max");
+        minCommission = _minCommission;
+    }
+
+    function setMaxCommission(uint256 _maxCommission) external onlyOwner {
+        require(_maxCommission >= minCommission, "max < min");
+        maxCommission = _maxCommission;
+    }
+
+    function withdrawCommissions(address payable to) external onlyOwner {
+        (bool sent, ) = to.call{value: address(this).balance}("");
+        require(sent, "withdraw failed");
+    }
+
+    function anchor(string calldata cid, string calldata filename) external payable {
+        require(msg.value >= minCommission && msg.value <= maxCommission, "commission not met");
         _validateFilename(filename);
         _validateCidV1(cid);
-        emit Anchored(msg.sender, cid, filename, block.timestamp);
+        emit Anchored(msg.sender, cid, filename, block.timestamp, msg.value);
     }
 
     function _validateFilename(string calldata filename) internal pure {
