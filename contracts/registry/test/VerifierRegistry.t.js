@@ -1,16 +1,16 @@
 const { expect } = require('chai');
 
 describe('VerifierRegistry', function () {
-  async function deploy() {
+  async function deploy(owner) {
     const VerifierRegistry = await ethers.getContractFactory('VerifierRegistry');
-    const registry = await VerifierRegistry.deploy();
+    const registry = await VerifierRegistry.deploy(owner);
     await registry.waitForDeployment();
     return registry;
   }
 
   it('anchors an entry and emits event', async function () {
     const [sender] = await ethers.getSigners();
-    const registry = await deploy();
+    const registry = await deploy(sender.address);
 
     const tx = await registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf');
     const receipt = await tx.wait();
@@ -25,7 +25,8 @@ describe('VerifierRegistry', function () {
   });
 
   it('rejects invalid filenames (empty, too long, bad chars, tilde, uppercase, space, bad ends)', async function () {
-    const registry = await deploy();
+    const [owner] = await ethers.getSigners();
+    const registry = await deploy(owner.address);
     // empty
     await expect(registry.anchor('cid', '')).to.be.revertedWith('filename empty');
     // too long (129 chars)
@@ -44,25 +45,29 @@ describe('VerifierRegistry', function () {
   });
 
   it('accepts valid CIDv1 base32 string', async function () {
-    const registry = await deploy();
+    const [owner] = await ethers.getSigners();
+    const registry = await deploy(owner.address);
     const validCid = 'bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta'; // 59 chars, lowercase, begins with 'bafy'
     await expect(registry.anchor(validCid, 'good.pdf')).to.not.be.reverted;
   });
 
   it('rejects CIDv1 not starting with bafy', async function () {
-    const registry = await deploy();
+    const [owner] = await ethers.getSigners();
+    const registry = await deploy(owner.address);
     const badCid = 'cafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta';
     await expect(registry.anchor(badCid, 'good.pdf')).to.be.revertedWith('cidv1: bad prefix');
   });
 
   it('rejects CIDv1 with invalid length', async function () {
-    const registry = await deploy();
+    const [owner] = await ethers.getSigners();
+    const registry = await deploy(owner.address);
     await expect(registry.anchor('bafy', 'good.pdf')).to.be.revertedWith('cidv1: bad length');
     await expect(registry.anchor('bafy' + 'a'.repeat(70), 'good.pdf')).to.be.revertedWith('cidv1: bad length');
   });
 
   it('rejects CIDv1 with invalid chars', async function () {
-    const registry = await deploy();
+    const [owner] = await ethers.getSigners();
+    const registry = await deploy(owner.address);
     const invalid = 'bafybEigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta'; // contains uppercase E
     await expect(registry.anchor(invalid, 'good.pdf')).to.be.revertedWith('cidv1: invalid char');
     const plusInvalid = 'bafybeig+yrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta'; // contains plus
@@ -72,7 +77,8 @@ describe('VerifierRegistry', function () {
   });
 
   it('gas usage is within expected bound', async function () {
-    const registry = await deploy();
+    const [owner] = await ethers.getSigners();
+    const registry = await deploy(owner.address);
     const tx = await registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'file_2.pdf');
     const receipt = await tx.wait();
     // crude bound check; adjust as needed if optimizer settings change

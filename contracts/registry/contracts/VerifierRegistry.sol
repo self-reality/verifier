@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract VerifierRegistry {
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract VerifierRegistry is Ownable {
+    constructor(address initialOwner) Ownable(initialOwner) {}
+
     event Anchored(address indexed submitter, string cid, string filename, uint256 timestamp);
 
     function anchor(string calldata cid, string calldata filename) external {
