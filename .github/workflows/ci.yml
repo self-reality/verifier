@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  workers:
+    name: Workers (price-feed)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/price-feed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: workers/price-feed/package.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run test
+
+  contracts:
+    name: Contracts (registry)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts/registry
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: contracts/registry/package.json
+      - run: npm ci
+      - run: npx hardhat compile
+      - run: npm test
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+

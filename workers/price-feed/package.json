@@ -1,0 +1,19 @@
+{
+  "name": "price-feed-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "lint": "echo 'no lint configured'",
+    "test": "node --version && echo 'no tests yet'",
+    "build": "echo 'workers build handled by wrangler'"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}
+
+

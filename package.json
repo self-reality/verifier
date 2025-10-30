@@ -1,0 +1,18 @@
+{
+  "name": "verifier-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "workers/*",
+    "contracts/*",
+    "web"
+  ],
+  "scripts": {
+    "ci": "echo Use per-package CI jobs",
+    "lint": "echo lint at root is noop",
+    "test": "echo test at root is noop",
+    "build": "echo build at root is noop"
+  }
+}
+
+

@@ -1,0 +1,11 @@
+name = "price-feed"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[vars]
+CACHE_TTL_SECONDS = 3600
+
+[observability]
+enabled = true
+
+
