@@ -26,6 +26,12 @@ Notes:
 - CORS allowlist: set `ORIGINS_ALLOWLIST` to a comma-separated list like `https://app.example.com,https://staging.example.com`.
 - Basic per-IP rate limit: `RATE_LIMIT_PER_MIN` (default 60).
 
+Secrets/config:
+```
+cd workers/price-feed
+npx wrangler secret put API_KEYS
+```
+
 Local dev:
 ```
 pnpm i # or npm i

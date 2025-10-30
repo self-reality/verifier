@@ -1,5 +1,9 @@
 const TEXT_JSON = { 'content-type': 'application/json' };
-
+// Base
+// Polygon
+// Arbitrum
+// Optimism
+// Ethereum 
 function parseAllowedOrigins(env) {
   const raw = env.ORIGINS_ALLOWLIST || '';
   return raw
@@ -83,6 +87,41 @@ async function fetchPriceUsdPrimary(tokenId) {
   return price;
 }
 
+function tokenIdToSymbol(tokenId) {
+  switch (tokenId) {
+    case 'ethereum':
+      return 'ETH';
+    case 'matic-network':
+      return 'MATIC';
+    case 'optimism':
+      return 'OP';
+    case 'arbitrum-one':
+      return 'ARB';
+    default:
+      return null;
+  }
+}
+
+async function fetchPriceUsdFromCoindeskIfConfigured(tokenId, env) {
+  const base = env.COINDESK_PROXY_URL || '';
+  if (!base) throw new Error('coindesk not configured');
+  const symbol = tokenIdToSymbol(tokenId);
+  if (!symbol) throw new Error('coindesk symbol unsupported');
+  const url = new URL(base);
+  // Expect a simple proxy that returns { priceUsd: number } for symbol/USD
+  // The proxy should accept query params: symbol, currency (optional; defaults to USD)
+  url.searchParams.set('symbol', symbol);
+  url.searchParams.set('currency', 'USD');
+  const headers = {};
+  if (env.COINDESK_PROXY_KEY) headers['authorization'] = `Bearer ${env.COINDESK_PROXY_KEY}`;
+  const res = await fetch(url.toString(), { headers, cf: { cacheTtl: 60, cacheEverything: true } });
+  if (!res.ok) throw new Error(`coindesk ${res.status}`);
+  const data = await res.json();
+  const price = Number(data?.priceUsd ?? data?.price_usd ?? data?.usd);
+  if (!isFinite(price) || price <= 0) throw new Error('coindesk price invalid');
+  return price;
+}
+
 async function fetchPriceUsdFallback(tokenId) {
   // Simple mapping for a second source (CoinCap uses symbols rather than ids for these majors)
   const symbolMap = {
@@ -111,12 +150,15 @@ function computeWeiForUsd(usd, priceUsd) {
   return (usdScaled * WEI_PER_ETH) / priceScaled;
 }
 
-async function getPriceUsd(tokenId) {
+async function getPriceUsd(tokenId, env) {
+  // Try CoinDesk (if configured) -> CoinGecko -> CoinCap
+  try {
+    return await fetchPriceUsdFromCoindeskIfConfigured(tokenId, env);
+  } catch (_) {}
   try {
     return await fetchPriceUsdPrimary(tokenId);
-  } catch (_) {
-    return await fetchPriceUsdFallback(tokenId);
-  }
+  } catch (_) {}
+  return await fetchPriceUsdFallback(tokenId);
 }
 
 async function handleUsdToAmount(request, env, ctx) {
@@ -148,7 +190,7 @@ async function handleUsdToAmount(request, env, ctx) {
     return resp;
   }
 
-  const priceUsd = await getPriceUsd(tokenId);
+  const priceUsd = await getPriceUsd(tokenId, env);
   const amountWei = computeWeiForUsd(usd, priceUsd);
   const payload = {
     chainId,

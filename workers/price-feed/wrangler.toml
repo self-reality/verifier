@@ -5,7 +5,6 @@ compatibility_date = "2024-09-23"
 [vars]
 CACHE_TTL_SECONDS = 3600
 ORIGINS_ALLOWLIST = ""
-API_KEYS = ""
 RATE_LIMIT_PER_MIN = 60
 
 [observability]
