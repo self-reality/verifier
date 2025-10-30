@@ -4,14 +4,10 @@ pragma solidity ^0.8.24;
 contract VerifierRegistry {
     event Anchored(address indexed submitter, string cid, string filename, uint256 timestamp);
 
-    // Removed Entry struct and entries array; we just emit an event now
-
     function anchor(string calldata cid, string calldata filename) external {
         _validateFilename(filename);
         emit Anchored(msg.sender, cid, filename, block.timestamp);
     }
-
-    // Removed entriesLength() external view returns (uint256)
 
     function _validateFilename(string calldata filename) internal pure {
         bytes memory b = bytes(filename);
