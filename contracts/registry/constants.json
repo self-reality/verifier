@@ -2,8 +2,8 @@
   "exampleNetwork": {
     "address": "",
     "config": {
-      "minCommission": "0",
-      "maxCommission": "0",
+      "minFee": "0",
+      "maxFee": "0",
       "owner": "0x0000000000000000000000000000000000000000"
     }
   }

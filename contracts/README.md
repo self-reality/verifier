@@ -64,8 +64,8 @@ Notes
     "chainId": 11155111,
     "deployedAt": "2024-07-01T11:11:00.000Z",
     "config": {
-      "minCommission": "2500000000000",
-      "maxCommission": "1300000000000000",
+      "minFee": "2500000000000",
+      "maxFee": "1300000000000000",
       "owner": "0x0123...4567"
     }
   }

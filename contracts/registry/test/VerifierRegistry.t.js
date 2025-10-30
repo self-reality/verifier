@@ -12,7 +12,7 @@ describe('VerifierRegistry', function () {
     const [sender] = await ethers.getSigners();
     const registry = await deploy(sender.address);
 
-    // Use value within new commission range
+    // Use value within new fee range
     const tx = await registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: ethers.parseEther('0.001') });
     const receipt = await tx.wait();
 
@@ -29,7 +29,7 @@ describe('VerifierRegistry', function () {
   it('rejects invalid filenames (empty, too long, bad chars, tilde, uppercase, space, bad ends)', async function () {
     const [owner] = await ethers.getSigners();
     const registry = await deploy(owner.address);
-    // Use valid commission value
+    // Use valid fee value
     const validValue = ethers.parseEther('0.001');
     // empty
     await expect(registry.anchor('cid', '', { value: validValue })).to.be.revertedWith('filename empty');
@@ -89,32 +89,32 @@ describe('VerifierRegistry', function () {
     expect(Number(receipt.gasUsed)).to.be.lessThan(150000);
   });
 
-  it('allows only owner to set commissions', async function () {
+  it('allows only owner to set fees', async function () {
     const [owner, user, recipient] = await ethers.getSigners();
     const registry = await deploy(owner.address);
 
     // Only owner can set
-    await expect(registry.connect(user).setCommissionRange(500_000_000_000_0n, 2_000_000_000_000_000n)).to.be.reverted;
-    await expect(registry.setCommissionRange(500_000_000_000_0n, 2_000_000_000_000_000n)).to.not.be.reverted; // 0.000005 to 0.002 ether
+    await expect(registry.connect(user).setFeeRange(500_000_000_000_0n, 2_000_000_000_000_000n)).to.be.reverted;
+    await expect(registry.setFeeRange(500_000_000_000_0n, 2_000_000_000_000_000n)).to.not.be.reverted; // 0.000005 to 0.002 ether
   });
 
-  it('rejects out-of-bounds and enforces commission range', async function () {
+  it('rejects out-of-bounds and enforces fee range', async function () {
     const [owner, user, recipient] = await ethers.getSigners();
     const registry = await deploy(owner.address);
 
     // min > max should revert
-    await expect(registry.setCommissionRange(2_000_000_000_000n, 1_000_000_000_000n)).to.be.revertedWith('commission bounds: min > max');
+    await expect(registry.setFeeRange(2_000_000_000_000n, 1_000_000_000_000n)).to.be.revertedWith('fee bounds: min > max');
 
     // set a valid range
-    await registry.setCommissionRange(2_500_000_000_000n, 2_000_000_000_000_000n); // 0.0000025 to 0.002 ether
+    await registry.setFeeRange(2_500_000_000_000n, 2_000_000_000_000_000n); // 0.0000025 to 0.002 ether
 
     // Enforces min/max on anchor
-    await expect(registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: 2_000_000_000_000n })).to.be.revertedWith('commission not met'); // too low (0.000002 ether)
-    await expect(registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: 3_000_000_000_000_000n })).to.be.revertedWith('commission not met'); // too high (0.003 ether)
+    await expect(registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: 2_000_000_000_000n })).to.be.revertedWith('fee not met'); // too low (0.000002 ether)
+    await expect(registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: 3_000_000_000_000_000n })).to.be.revertedWith('fee not met'); // too high (0.003 ether)
     await expect(registry.anchor('bafybeigdyrztc3jwlkzc6cnnk3xjqdtfq547lfupgkhb2yyfpyz5wsttta', 'doc.pdf', { value: ethers.parseEther('0.001') })).to.not.be.reverted; // valid value
   });
 
-  it('withdraws accumulated commission to owner', async function () {
+  it('withdraws accumulated fee to owner', async function () {
     const [owner, user] = await ethers.getSigners();
     const registry = await deploy(owner.address);
     // User anchors with payment in new range
@@ -124,7 +124,7 @@ describe('VerifierRegistry', function () {
     expect(bal).to.equal(ethers.parseEther('0.001'));
     // Withdraw to owner
     const before = await ethers.provider.getBalance(owner.address);
-    const tx = await registry.withdrawCommissions(owner.address);
+    const tx = await registry.withdrawFees(owner.address);
     const receipt = await tx.wait();
     const after = await ethers.provider.getBalance(owner.address);
     expect(after).to.be.above(before);

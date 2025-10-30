@@ -21,16 +21,16 @@ async function main() {
   } catch (e) {
     // file may not exist or be empty
   }
-  const minCommission = "2500000000000"; // as string, matches VerifierRegistry.sol default
-  const maxCommission = "1300000000000000";
+  const minFee = "2500000000000"; // as string, matches VerifierRegistry.sol default
+  const maxFee = "1300000000000000";
   const owner = (await registry.owner()) || '';
   data[networkName] = {
     address,
     chainId: Number(net.chainId),
     deployedAt: new Date().toISOString(),
     config: {
-      minCommission,
-      maxCommission,
+      minFee,
+      maxFee,
       owner: owner
     }
   };

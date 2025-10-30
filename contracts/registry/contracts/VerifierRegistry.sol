@@ -8,22 +8,22 @@ contract VerifierRegistry is Ownable {
 
     event Anchored(address indexed submitter, string cid, string filename, uint256 timestamp, uint256 paid);
 
-    uint256 public minCommission = 0.0000025 ether; // 1 cent at ETHUSD 4000
-    uint256 public maxCommission = 0.0013 ether; // $5 at ETHUSD 4000
+    uint256 public minFee = 0.0000025 ether; // 1 cent at ETHUSD 4000
+    uint256 public maxFee = 0.0013 ether; // $5 at ETHUSD 4000
 
-    function setCommissionRange(uint256 _minCommission, uint256 _maxCommission) external onlyOwner {
-        require(_minCommission <= _maxCommission, "commission bounds: min > max");
-        minCommission = _minCommission;
-        maxCommission = _maxCommission;
+    function setFeeRange(uint256 _minFee, uint256 _maxFee) external onlyOwner {
+        require(_minFee <= _maxFee, "fee bounds: min > max");
+        minFee = _minFee;
+        maxFee = _maxFee;
     }
 
-    function withdrawCommissions(address payable to) external onlyOwner {
+    function withdrawFees(address payable to) external onlyOwner {
         (bool sent, ) = to.call{value: address(this).balance}("");
         require(sent, "withdraw failed");
     }
 
     function anchor(string calldata cid, string calldata filename) external payable {
-        require(msg.value >= minCommission && msg.value <= maxCommission, "commission not met");
+        require(msg.value >= minFee && msg.value <= maxFee, "fee not met");
         _validateFilename(filename);
         _validateCidV1(cid);
         emit Anchored(msg.sender, cid, filename, block.timestamp, msg.value);
