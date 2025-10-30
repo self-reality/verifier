@@ -3,7 +3,9 @@ const { expect } = require('chai');
 describe('VerifierRegistry', function () {
   async function deploy(owner) {
     const VerifierRegistry = await ethers.getContractFactory('VerifierRegistry');
-    const registry = await VerifierRegistry.deploy(owner);
+    const minFee = 2_500_000_000_000n; // 0.0000025 ether
+    const maxFee = 1_300_000_000_000_000n; // 0.0013 ether
+    const registry = await VerifierRegistry.deploy(owner, minFee, maxFee);
     await registry.waitForDeployment();
     return registry;
   }

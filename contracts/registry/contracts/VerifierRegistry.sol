@@ -4,12 +4,16 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract VerifierRegistry is Ownable {
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address initialOwner, uint256 _minFee, uint256 _maxFee) Ownable(initialOwner) {
+        require(_minFee <= _maxFee, "fee bounds: min > max");
+        minFee = _minFee;
+        maxFee = _maxFee;
+    }
 
     event Anchored(address indexed submitter, string cid, string filename, uint256 timestamp, uint256 paid);
 
-    uint256 public minFee = 0.0000025 ether; // 1 cent at ETHUSD 4000
-    uint256 public maxFee = 0.0013 ether; // $5 at ETHUSD 4000
+    uint256 public minFee;
+    uint256 public maxFee;
 
     function setFeeRange(uint256 _minFee, uint256 _maxFee) external onlyOwner {
         require(_minFee <= _maxFee, "fee bounds: min > max");

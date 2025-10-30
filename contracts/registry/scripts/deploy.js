@@ -2,8 +2,12 @@ const fs = require('fs');
 const path = require('path');
 
 async function main() {
+  const [deployer] = await ethers.getSigners();
+  const minFee = "2500000000000"; // 0.0000025 ether
+  const maxFee = "1300000000000000"; // 0.0013 ether
+
   const VerifierRegistry = await ethers.getContractFactory('VerifierRegistry');
-  const registry = await VerifierRegistry.deploy();
+  const registry = await VerifierRegistry.deploy(deployer.address, BigInt(minFee), BigInt(maxFee));
   await registry.waitForDeployment();
   const address = await registry.getAddress();
 
@@ -21,8 +25,6 @@ async function main() {
   } catch (e) {
     // file may not exist or be empty
   }
-  const minFee = "2500000000000"; // as string, matches VerifierRegistry.sol default
-  const maxFee = "1300000000000000";
   const owner = (await registry.owner()) || '';
   data[networkName] = {
     address,
@@ -35,6 +37,8 @@ async function main() {
     }
   };
   fs.writeFileSync(constantsPath, JSON.stringify(data, null, 2));
+
+}
 
 main().catch((error) => {
   console.error(error);
