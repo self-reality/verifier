@@ -29,3 +29,4 @@ artifacts/
 .DS_Store
 
 
+.npm-cache/
