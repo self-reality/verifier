@@ -1,5 +1,29 @@
 {
-  "Base": {
+  "base": {
+    "config": {
+      "minFee": "2500000000000",
+      "maxFee": "1300000000000000"
+    }
+  },
+  "polygon": {
+    "config": {
+      "minFee": "2500000000000",
+      "maxFee": "1300000000000000"
+    }
+  },
+  "arbitrum": {
+    "config": {
+      "minFee": "2500000000000",
+      "maxFee": "1300000000000000"
+    }
+  },
+  "optimism": {
+    "config": {
+      "minFee": "2500000000000",
+      "maxFee": "1300000000000000"
+    }
+  },
+  "mainnet": {
     "config": {
       "minFee": "2500000000000",
       "maxFee": "1300000000000000"

@@ -3,16 +3,33 @@ const path = require('path');
 
 async function main() {
   const [deployer] = await ethers.getSigners();
-  const minFee = "2500000000000"; // 0.0000025 ether
-  const maxFee = "1300000000000000"; // 0.0013 ether
+  const net = await ethers.provider.getNetwork();
+  const networkName = network.name; // hardhat runtime global `network`
+
+  // Load per-network fees from scripts/config.json
+  const configPath = path.resolve(__dirname, 'config.json');
+  let configData = {};
+  try {
+    const raw = fs.readFileSync(configPath, 'utf8');
+    configData = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    // file may not exist or be empty; handled below if missing
+  }
+
+  const primaryKey = (networkName || '').toLowerCase();
+  const feesConfig = configData[primaryKey]?.config;
+
+  if (!feesConfig) {
+    throw new Error(`Fee config not found for network "${networkName}". Add key "${primaryKey}" to scripts/config.json`);
+  }
+
+  const minFee = feesConfig.minFee;
+  const maxFee = feesConfig.maxFee;
 
   const VerifierRegistry = await ethers.getContractFactory('VerifierRegistry');
   const registry = await VerifierRegistry.deploy(deployer.address, BigInt(minFee), BigInt(maxFee));
   await registry.waitForDeployment();
   const address = await registry.getAddress();
-
-  const net = await ethers.provider.getNetwork();
-  const networkName = network.name || `chain-${net.chainId}`; // hardhat runtime global `network`
 
   console.log('VerifierRegistry deployed:', address, `on ${networkName} (chainId ${net.chainId})`);
 
