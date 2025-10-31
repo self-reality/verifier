@@ -60,10 +60,9 @@ function chainIdToCoingeckoId(chainId) {
   switch (Number(chainId)) {
     case 1: // Ethereum
     case 8453: // Base mainnet, native token ETH
-    case 84532: // Base Sepolia
       return 'ethereum';
     case 137:
-      return 'matic-network';
+      return 'polygon-ecosystem-token';
     case 10: // Optimism
       return 'optimism';
     case 42161: // Arbitrum
@@ -87,6 +86,8 @@ function tokenIdToSymbol(tokenId) {
   switch (tokenId) {
     case 'ethereum':
       return 'ETH';
+    case 'polygon-ecosystem-token':
+      return 'POL';
     case 'matic-network':
       return 'MATIC';
     case 'optimism':
@@ -98,23 +99,17 @@ function tokenIdToSymbol(tokenId) {
   }
 }
 
-async function fetchPriceUsdFromCoindesk(tokenId, env) {
-  const base = env.COINDESK_PROXY_URL || '';
-  if (!base) throw new Error('coindesk not configured');
+async function fetchPriceUsdFromCryptocompare(tokenId, env) {
   const symbol = tokenIdToSymbol(tokenId);
-  if (!symbol) throw new Error('coindesk symbol unsupported');
-  const url = new URL(base);
-  // Expect a simple proxy that returns { priceUsd: number } for symbol/USD
-  // The proxy should accept query params: symbol, currency (optional; defaults to USD)
-  url.searchParams.set('symbol', symbol);
-  url.searchParams.set('currency', 'USD');
-  const headers = {};
-  if (env.COINDESK_PROXY_KEY) headers['authorization'] = `Bearer ${env.COINDESK_PROXY_KEY}`;
-  const res = await fetch(url.toString(), { headers, cf: { cacheTtl: 60, cacheEverything: true } });
-  if (!res.ok) throw new Error(`coindesk ${res.status}`);
+  if (!symbol) throw new Error('cryptocompare symbol unsupported');
+  const apiKey = env.COINDESK_PROXY_KEY;
+  if (!apiKey) throw new Error('cryptocompare not configured');
+  const url = `https://min-api.cryptocompare.com/data/price?fsym=${encodeURIComponent(symbol)}&tsyms=USD&api_key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, { cf: { cacheTtl: 60, cacheEverything: true } });
+  if (!res.ok) throw new Error(`cryptocompare ${res.status}`);
   const data = await res.json();
-  const price = Number(data?.priceUsd ?? data?.price_usd ?? data?.usd);
-  if (!isFinite(price) || price <= 0) throw new Error('coindesk price invalid');
+  const price = Number(data?.USD);
+  if (!isFinite(price) || price <= 0) throw new Error('cryptocompare price invalid');
   return price;
 }
 
@@ -142,7 +137,8 @@ async function getPriceUsd(tokenId, env, provider, strict) {
   for (const p of order) {
     try {
       if (p === 'coindesk') {
-        const priceUsd = await fetchPriceUsdFromCoindesk(tokenId, env);
+        // Behind the 'coindesk' provider name, use CryptoCompare as per migration plan
+        const priceUsd = await fetchPriceUsdFromCryptocompare(tokenId, env);
         return { priceUsd, providerUsed: 'coindesk' };
       }
       if (p === 'coingecko') {

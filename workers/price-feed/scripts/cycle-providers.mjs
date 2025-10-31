@@ -3,7 +3,7 @@ const USD = Number(process.env.USD || '1');
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS || '8000');
 const API_KEY = process.env.API_KEY || '';
 
-const CHAINS = [1, 8453, 84532, 137, 10, 42161];
+const CHAINS = [1, 8453, 137, 10, 42161];
 const PROVIDERS = ['coindesk', 'coingecko'];
 
 async function fetchJson(url, opts = {}) {
