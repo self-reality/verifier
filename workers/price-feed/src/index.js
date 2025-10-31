@@ -118,23 +118,7 @@ async function fetchPriceUsdFromCoindesk(tokenId, env) {
   return price;
 }
 
-async function fetchPriceUsdFromCoincap(tokenId) {
-  // Simple mapping for a second source (CoinCap uses symbols rather than ids for these majors)
-  const symbolMap = {
-    ethereum: 'ETH',
-    'matic-network': 'MATIC',
-    optimism: 'OP',
-    'arbitrum-one': 'ARB',
-  };
-  const symbol = symbolMap[tokenId];
-  if (!symbol) throw new Error('no fallback symbol');
-  const res = await fetch(`https://api.coincap.io/v2/assets/${symbol.toLowerCase()}`);
-  if (!res.ok) throw new Error(`coincap ${res.status}`);
-  const data = await res.json();
-  const price = Number(data?.data?.priceUsd);
-  if (!isFinite(price) || price <= 0) throw new Error('coincap price invalid');
-  return price;
-}
+// CoinCap removed (providers limited to coindesk and coingecko)
 
 function computeWeiForUsd(usd, priceUsd) {
   // Use integer math: priceScaled = round(priceUsd * 1e8)
@@ -146,21 +130,25 @@ function computeWeiForUsd(usd, priceUsd) {
   return (usdScaled * WEI_PER_ETH) / priceScaled;
 }
 
-async function getPriceUsd(tokenId, env, provider) {
-  // Provider preference with fallback
+async function getPriceUsd(tokenId, env, provider, strict) {
+  // Provider preference with optional fallback
   const preferred = (provider || 'coindesk').toLowerCase();
-  const order =
-    preferred === 'coingecko'
-      ? ['coingecko', 'coincap', 'coindesk']
-      : preferred === 'coincap'
-      ? ['coincap', 'coingecko', 'coindesk']
-      : ['coindesk', 'coingecko', 'coincap']; // default coindesk
+  const order = strict
+    ? [preferred]
+    : preferred === 'coingecko'
+    ? ['coingecko', 'coindesk']
+    : ['coindesk', 'coingecko'];
 
   for (const p of order) {
     try {
-      if (p === 'coindesk') return await fetchPriceUsdFromCoindesk(tokenId, env);
-      if (p === 'coingecko') return await fetchPriceUsdFromCoingecko(tokenId);
-      if (p === 'coincap') return await fetchPriceUsdFromCoincap(tokenId);
+      if (p === 'coindesk') {
+        const priceUsd = await fetchPriceUsdFromCoindesk(tokenId, env);
+        return { priceUsd, providerUsed: 'coindesk' };
+      }
+      if (p === 'coingecko') {
+        const priceUsd = await fetchPriceUsdFromCoingecko(tokenId);
+        return { priceUsd, providerUsed: 'coingecko' };
+      }
     } catch (_) {}
   }
   throw new Error('all providers failed');
@@ -171,6 +159,7 @@ async function handleUsdToAmount(request, env, ctx) {
   const usdParam = url.searchParams.get('usd');
   const chainIdParam = url.searchParams.get('chainId');
   const providerParam = url.searchParams.get('provider');
+  const strictParam = url.searchParams.get('strict');
   const usd = Number(usdParam);
   const chainId = Number(chainIdParam);
   if (!usdParam || Number.isNaN(usd) || usd <= 0 || !chainIdParam || Number.isNaN(chainId)) {
@@ -184,16 +173,17 @@ async function handleUsdToAmount(request, env, ctx) {
 
   // Validate provider if provided; default is coindesk
   const provider = (providerParam || 'coindesk').toLowerCase();
-  const allowedProviders = ['coindesk', 'coingecko', 'coincap'];
+  const allowedProviders = ['coindesk', 'coingecko'];
   if (providerParam && !allowedProviders.includes(provider)) {
     return new Response(JSON.stringify({ error: 'Unsupported provider' }), { status: 400, headers: TEXT_JSON });
   }
+  const strict = typeof strictParam === 'string' && /^(1|true)$/i.test(strictParam);
 
   // Cache key
   const ttl = parseInt(env.CACHE_TTL_SECONDS || '3600', 10);
   const cache = caches.default;
   const cacheKeyUrl = new URL(request.url);
-  cacheKeyUrl.searchParams.set('v', '1'); // bump to bust cache schema changes
+  cacheKeyUrl.searchParams.set('v', '2'); // bump to bust cache schema changes
   const cacheKey = new Request(cacheKeyUrl.toString(), { method: 'GET' });
   const cached = await cache.match(cacheKey);
   if (cached) {
@@ -203,13 +193,15 @@ async function handleUsdToAmount(request, env, ctx) {
     return resp;
   }
 
-  const priceUsd = await getPriceUsd(tokenId, env, provider);
+  const { priceUsd, providerUsed } = await getPriceUsd(tokenId, env, provider, strict);
   const amountWei = computeWeiForUsd(usd, priceUsd);
   const payload = {
     chainId,
     usd,
     tokenId,
     priceUsd,
+    providerRequested: provider,
+    providerUsed,
     amountWei: amountWei.toString(),
   };
   const resp = new Response(JSON.stringify(payload), {

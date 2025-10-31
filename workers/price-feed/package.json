@@ -8,7 +8,9 @@
     "start": "wrangler dev",
     "deploy": "wrangler deploy",
     "lint": "echo 'no lint configured'",
-    "test": "node --version && echo 'no tests yet'",
+    "test": "node --version && echo 'use: pnpm test:local or pnpm test:prod'",
+    "test:local": "BASE=http://127.0.0.1:8787 node scripts/cycle-providers.mjs",
+    "test:prod": "BASE=$BASE node scripts/cycle-providers.mjs",
     "build": "echo 'workers build handled by wrangler'"
   },
   "devDependencies": {
