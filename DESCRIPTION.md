@@ -13,7 +13,12 @@ Client‑side, ~$1 on‑chain proof‑of‑existence for any file. Your file nev
 - Acting as an IPFS pinning or hosting service.
 
 ### Value Proposition
-- **Trustless proof:** Immutable on‑chain anchor for the file’s cryptographic fingerprint.
+- **Trustless proof:** Immutable on‑chain anchor for the file’s cryptographic fingerprint. Initial chains: 
+Base
+Polygon
+Arbitrum
+Optimism
+Ethereum 
 - **Privacy:** File never leaves the user’s device; only derived hashes are published.
 - **Simplicity:** One‑click flow, ~$1 cost, instant certificate and report.
 

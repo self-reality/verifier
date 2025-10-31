@@ -7,6 +7,7 @@ Endpoints:
 Query params:
 - usd: positive number (e.g., 1.25)
 - chainId: EVM chain id (supported: 1, 8453, 84532, 137, 10, 42161)
+- provider: optional price provider; one of `coindesk` (default), `coingecko`, `coincap`
 
 Response example:
 ```
@@ -41,4 +42,9 @@ pnpm dev
 Example curl:
 ```
 curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453"
+```
+
+With explicit provider:
+```
+curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453&provider=coingecko"
 ```

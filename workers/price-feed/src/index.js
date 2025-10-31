@@ -1,9 +1,5 @@
 const TEXT_JSON = { 'content-type': 'application/json' };
-// Base
-// Polygon
-// Arbitrum
-// Optimism
-// Ethereum 
+
 function parseAllowedOrigins(env) {
   const raw = env.ORIGINS_ALLOWLIST || '';
   return raw
@@ -77,7 +73,7 @@ function chainIdToCoingeckoId(chainId) {
   }
 }
 
-async function fetchPriceUsdPrimary(tokenId) {
+async function fetchPriceUsdFromCoingecko(tokenId) {
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(tokenId)}&vs_currencies=usd`;
   const res = await fetch(url, { cf: { cacheTtl: 60, cacheEverything: true } });
   if (!res.ok) throw new Error(`coingecko ${res.status}`);
@@ -102,7 +98,7 @@ function tokenIdToSymbol(tokenId) {
   }
 }
 
-async function fetchPriceUsdFromCoindeskIfConfigured(tokenId, env) {
+async function fetchPriceUsdFromCoindesk(tokenId, env) {
   const base = env.COINDESK_PROXY_URL || '';
   if (!base) throw new Error('coindesk not configured');
   const symbol = tokenIdToSymbol(tokenId);
@@ -122,7 +118,7 @@ async function fetchPriceUsdFromCoindeskIfConfigured(tokenId, env) {
   return price;
 }
 
-async function fetchPriceUsdFallback(tokenId) {
+async function fetchPriceUsdFromCoincap(tokenId) {
   // Simple mapping for a second source (CoinCap uses symbols rather than ids for these majors)
   const symbolMap = {
     ethereum: 'ETH',
@@ -150,21 +146,31 @@ function computeWeiForUsd(usd, priceUsd) {
   return (usdScaled * WEI_PER_ETH) / priceScaled;
 }
 
-async function getPriceUsd(tokenId, env) {
-  // Try CoinDesk (if configured) -> CoinGecko -> CoinCap
-  try {
-    return await fetchPriceUsdFromCoindeskIfConfigured(tokenId, env);
-  } catch (_) {}
-  try {
-    return await fetchPriceUsdPrimary(tokenId);
-  } catch (_) {}
-  return await fetchPriceUsdFallback(tokenId);
+async function getPriceUsd(tokenId, env, provider) {
+  // Provider preference with fallback
+  const preferred = (provider || 'coindesk').toLowerCase();
+  const order =
+    preferred === 'coingecko'
+      ? ['coingecko', 'coincap', 'coindesk']
+      : preferred === 'coincap'
+      ? ['coincap', 'coingecko', 'coindesk']
+      : ['coindesk', 'coingecko', 'coincap']; // default coindesk
+
+  for (const p of order) {
+    try {
+      if (p === 'coindesk') return await fetchPriceUsdFromCoindesk(tokenId, env);
+      if (p === 'coingecko') return await fetchPriceUsdFromCoingecko(tokenId);
+      if (p === 'coincap') return await fetchPriceUsdFromCoincap(tokenId);
+    } catch (_) {}
+  }
+  throw new Error('all providers failed');
 }
 
 async function handleUsdToAmount(request, env, ctx) {
   const url = new URL(request.url);
   const usdParam = url.searchParams.get('usd');
   const chainIdParam = url.searchParams.get('chainId');
+  const providerParam = url.searchParams.get('provider');
   const usd = Number(usdParam);
   const chainId = Number(chainIdParam);
   if (!usdParam || Number.isNaN(usd) || usd <= 0 || !chainIdParam || Number.isNaN(chainId)) {
@@ -174,6 +180,13 @@ async function handleUsdToAmount(request, env, ctx) {
   const tokenId = chainIdToCoingeckoId(chainId);
   if (!tokenId) {
     return new Response(JSON.stringify({ error: 'Unsupported chainId' }), { status: 400, headers: TEXT_JSON });
+  }
+
+  // Validate provider if provided; default is coindesk
+  const provider = (providerParam || 'coindesk').toLowerCase();
+  const allowedProviders = ['coindesk', 'coingecko', 'coincap'];
+  if (providerParam && !allowedProviders.includes(provider)) {
+    return new Response(JSON.stringify({ error: 'Unsupported provider' }), { status: 400, headers: TEXT_JSON });
   }
 
   // Cache key
@@ -190,7 +203,7 @@ async function handleUsdToAmount(request, env, ctx) {
     return resp;
   }
 
-  const priceUsd = await getPriceUsd(tokenId, env);
+  const priceUsd = await getPriceUsd(tokenId, env, provider);
   const amountWei = computeWeiForUsd(usd, priceUsd);
   const payload = {
     chainId,
