@@ -65,8 +65,6 @@ function chainIdToCoingeckoId(chainId) {
       return 'polygon-ecosystem-token';
     case 10: // Optimism
       return 'optimism';
-    case 42161: // Arbitrum
-      return 'arbitrum-one';
     default:
       return null;
   }
@@ -92,8 +90,6 @@ function tokenIdToSymbol(tokenId) {
       return 'MATIC';
     case 'optimism':
       return 'OP';
-    case 'arbitrum-one':
-      return 'ARB';
     default:
       return null;
   }
