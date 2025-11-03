@@ -31,3 +31,4 @@ artifacts/
 
 .npm-cache/
 .vscode/settings.json
+.cursor/worktrees.json
