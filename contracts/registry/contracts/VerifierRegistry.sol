@@ -10,7 +10,7 @@ contract VerifierRegistry is Ownable {
         maxFee = _maxFee;
     }
 
-    event Anchored(address indexed submitter, string cid, string filename, uint256 timestamp, uint256 paid);
+    event Anchored(address indexed submitter, string indexed cid, string indexed filename, uint256 timestamp, uint256 paid);
 
     uint256 public minFee;
     uint256 public maxFee;
