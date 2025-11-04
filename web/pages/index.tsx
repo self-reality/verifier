@@ -377,12 +377,13 @@ export default function Home() {
                 <span style={{ fontSize: '8px' }}>{editedFilename || filename}</span>
                 <button
                   onClick={() => setShowEditOverlay(true)}
+                  disabled={!isUploaded}
                   style={{
                     border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    color: '#DDFFE7',
+                    backgroundColor: isUploaded ? '#343434' : '#222',
+                    color: isUploaded ? '#DDFFE7' : '#888',
                     padding: '4px 8px',
-                    cursor: 'pointer',
+                    cursor: isUploaded ? 'pointer' : 'not-allowed',
                     fontFamily: "'Press Start 2P', monospace",
                     fontSize: '8px',
                     marginLeft: '10px'
