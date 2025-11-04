@@ -124,7 +124,11 @@ export default function Home() {
   };
 
   const formatHumanTime = (timestamp: number) => {
-    return new Date(timestamp).toUTCString();
+    const date = new Date(timestamp);
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
   };
 
   const renderProgressBar = (progress: number) => {
@@ -356,7 +360,7 @@ export default function Home() {
                 ON-CHAIN CERTIFICATE PREVIEW
               </h3>
               <div style={{ fontSize: '8px', marginBottom: '10px' }}>
-                THIS INFO WILL APPEAR AS IS ON-CHAIN AND IN YOUR PDF CERTIFICATE:
+                THIS WILL APPEAR ON-CHAIN:
               </div>
 
               <div style={{ marginBottom: '10px' }}>
@@ -394,9 +398,8 @@ export default function Home() {
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '8px' }}>UTC TIMESTAMP: </span>
-                <span style={{ fontSize: '8px' }}>{formatUnixTime(currentTime)}</span>
-                <span style={{ fontSize: '8px', marginLeft: '10px' }}>WHICH IS {formatHumanTime(currentTime)}</span>
+                <span style={{ fontSize: '8px' }}>TIMESTAMP: </span>
+                <span style={{ fontSize: '8px' }}>{formatHumanTime(currentTime)} GMT</span>
               </div>
 
               <div>
