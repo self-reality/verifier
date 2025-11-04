@@ -507,9 +507,6 @@ export default function Home() {
                 STATUS:
                 <div style={{ marginLeft: '10px', marginTop: '5px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
-                    {transactionStatus !== 'idle' ? '✓' : ' '} WALLET CONNECTED
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
                     {transactionStatus === 'sent' || transactionStatus === 'minted' ? '✓' : ' '} TRANSACTION SENT
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
