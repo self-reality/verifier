@@ -20,6 +20,31 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
+  // Shared X button styles
+  const xButtonStyle = {
+    border: '2px solid #DDFFE7',
+    backgroundColor: '#343434',
+    display: 'inline-block',
+    lineHeight: '8px',
+    padding: '4px'
+  };
+
+  const xButtonStandaloneStyle = {
+    border: '2px solid #DDFFE7',
+    backgroundColor: '#343434',
+    color: '#DDFFE7',
+    cursor: 'pointer',
+    fontFamily: "'Press Start 2P', monospace",
+    fontSize: '12px',
+    width: '24px',
+    height: '24px',
+    padding: '0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: '1'
+  };
+
   useEffect(() => {
     // Generate CID and set initial time only on client side to avoid hydration mismatch
     setMockCID('Qm' + Math.random().toString(36).substr(2, 43));
@@ -194,15 +219,7 @@ export default function Home() {
                   }}
                 >
                   CONNECTED
-                  <span style={{
-                    // width: '12px',
-                    // height: '12px',
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    display: 'inline-block',
-                    lineHeight: '8px',
-                    padding: '4px'
-                  }}>X</span>
+                  <span style={xButtonStyle}>X</span>
                 </button>
               ) : (
                 <button
@@ -292,24 +309,7 @@ export default function Home() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
                 <span style={{ fontSize: '10px' }}>{editedFilename || filename}</span>
-                <button
-                  onClick={handleRemoveFile}
-                  style={{
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    color: '#DDFFE7',
-                    cursor: 'pointer',
-                    fontFamily: "'Press Start 2P', monospace",
-                    fontSize: '12px',
-                    width: '24px',
-                    height: '24px',
-                    padding: '0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    lineHeight: '1'
-                  }}
-                >
+                <button onClick={handleRemoveFile} style={xButtonStandaloneStyle}>
                   X
                 </button>
               </div>
@@ -405,7 +405,7 @@ export default function Home() {
               <div>
                 <span style={{ fontSize: '8px' }}>FEE: </span>
                 {walletConnected ? (
-                  <span style={{ fontSize: '8px' }}>0.001 ETH (WHICH IS APPROX $1)</span>
+                  <span style={{ fontSize: '8px' }}>0.001 ETH (APPROX $1)</span>
                 ) : (
                   <span style={{ fontSize: '8px', color: '#888' }}>(CONNECT YOUR WALLET)</span>
                 )}
@@ -444,13 +444,7 @@ export default function Home() {
                     }}
                   >
                     CONNECTED
-                    <span style={{
-                      border: '2px solid #DDFFE7',
-                      backgroundColor: '#343434',
-                      display: 'inline-block',
-                      lineHeight: '8px',
-                      padding: '4px'
-                    }}>X</span>
+                    <span style={xButtonStyle}>X</span>
                   </button>
                 ) : (
                   <button
