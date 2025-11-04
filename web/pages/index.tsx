@@ -21,7 +21,6 @@ export default function Home() {
   const [downloadClicked, setDownloadClicked] = useState(false);
   const [showResetConfirmOverlay, setShowResetConfirmOverlay] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -87,22 +86,20 @@ export default function Home() {
   }, [isHashing, hashProgress]);
 
   useEffect(() => {
-    if (isGeneratingPdf && pdfProgress < 100) {
+    if (pdfProgress > 0 && pdfProgress < 100) {
       const timer = setTimeout(() => {
         setPdfProgress(prev => Math.min(prev + 5, 100));
       }, 30);
       return () => clearTimeout(timer);
-    } else if (isGeneratingPdf && pdfProgress === 100) {
-      setIsGeneratingPdf(false);
     }
-  }, [isGeneratingPdf, pdfProgress]);
+  }, [pdfProgress]);
 
   useEffect(() => {
     // Start PDF generation automatically when transaction is minted
-    if (transactionStatus === 'minted' && !isGeneratingPdf && pdfProgress === 0) {
-      setIsGeneratingPdf(true);
+    if (transactionStatus === 'minted' && pdfProgress === 0) {
+      setPdfProgress(1);
     }
-  }, [transactionStatus, isGeneratingPdf, pdfProgress]);
+  }, [transactionStatus, pdfProgress]);
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
@@ -166,7 +163,6 @@ export default function Home() {
     setTermsAccepted(false);
     setDownloadClicked(false);
     setPdfProgress(0);
-    setIsGeneratingPdf(false);
     setShowResetConfirmOverlay(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
