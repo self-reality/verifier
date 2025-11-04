@@ -18,6 +18,8 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState(0);
   const [mockCID, setMockCID] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [downloadClicked, setDownloadClicked] = useState(false);
+  const [showResetConfirmOverlay, setShowResetConfirmOverlay] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -126,6 +128,10 @@ export default function Home() {
   };
 
   const handleNewFile = () => {
+    setShowResetConfirmOverlay(true);
+  };
+
+  const handleConfirmReset = () => {
     // Reset file and transaction state, but keep wallet connected
     setFile(null);
     setFilename('');
@@ -138,6 +144,8 @@ export default function Home() {
     setTransactionStatus('idle');
     setTransactionHash('');
     setTermsAccepted(false);
+    setDownloadClicked(false);
+    setShowResetConfirmOverlay(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -524,7 +532,7 @@ export default function Home() {
                     style={{ width: '12px', height: '12px', marginTop: '2px' }}
                   />
                   <span>
-                    I UNDERSTAND THAT THE FILE ITSELF IS NOT SENT ANYWHERE, I WILL KEEP IT IN A SAFE PLACE AND WILL NOT MODIFY IT. THIS IS THE ONLY WAY TO VERIFY THE VERIFICATION.
+                    FILE NEVER LEAVES YOUR COMPUTER. KEEP IT SAFE & UNMODIFIED TO VERIFY LATER.
                   </span>
                 </label>
               </div>
@@ -613,6 +621,7 @@ export default function Home() {
               textAlign: 'center'
             }}>
               <button
+                onClick={() => setDownloadClicked(true)}
                 style={{
                   border: '2px solid #DDFFE7',
                   backgroundColor: '#343434',
@@ -629,13 +638,13 @@ export default function Home() {
               </button>
               <button
                 onClick={handleNewFile}
-                disabled={transactionStatus !== 'minted'}
+                disabled={transactionStatus !== 'minted' || !downloadClicked}
                 style={{
                   border: '2px solid #DDFFE7',
-                  backgroundColor: transactionStatus === 'minted' ? '#343434' : '#222',
-                  color: transactionStatus === 'minted' ? '#DDFFE7' : '#888',
+                  backgroundColor: (transactionStatus === 'minted' && downloadClicked) ? '#343434' : '#222',
+                  color: (transactionStatus === 'minted' && downloadClicked) ? '#DDFFE7' : '#888',
                   padding: '15px 30px',
-                  cursor: transactionStatus === 'minted' ? 'pointer' : 'not-allowed',
+                  cursor: (transactionStatus === 'minted' && downloadClicked) ? 'pointer' : 'not-allowed',
                   fontFamily: "'Press Start 2P', monospace",
                   fontSize: '10px',
                   width: '100%'
@@ -722,6 +731,68 @@ export default function Home() {
                   }}
                 >
                   SAVE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reset Confirmation Overlay */}
+        {showResetConfirmOverlay && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}>
+            <div style={{
+              border: '3px solid #DDFFE7',
+              padding: '30px',
+              backgroundColor: '#343434',
+              maxWidth: '500px',
+              width: '90%'
+            }}>
+              <div style={{
+                fontSize: '8px',
+                marginBottom: '20px',
+                lineHeight: '1.8'
+              }}>
+                DID YOU SAVE YOUR PDF? YOU CAN STILL FIND THE TRANSACTION IN YOUR WALLET, BUT HAVING THE PDF IS MORE CONVENIENT.
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  onClick={handleConfirmReset}
+                  style={{
+                    border: '2px solid #DDFFE7',
+                    backgroundColor: '#343434',
+                    color: '#DDFFE7',
+                    padding: '10px 20px',
+                    cursor: 'pointer',
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: '8px'
+                  }}
+                >
+                  YES, I SAVED IT
+                </button>
+                <button
+                  onClick={() => setShowResetConfirmOverlay(false)}
+                  style={{
+                    border: '2px solid #DDFFE7',
+                    backgroundColor: '#343434',
+                    color: '#DDFFE7',
+                    padding: '10px 20px',
+                    cursor: 'pointer',
+                    fontFamily: "'Press Start 2P', monospace",
+                    fontSize: '8px'
+                  }}
+                >
+                  NO, LET ME SAVE IT
                 </button>
               </div>
             </div>
