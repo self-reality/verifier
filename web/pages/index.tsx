@@ -475,14 +475,14 @@ export default function Home() {
                 onClick={() => {
                   setDownloadClicked(true);
                 }}
-                disabled={pdfProgress < 100 || downloadClicked}
-                className={`btn btn-large btn-full-width ${(pdfProgress === 100 && !downloadClicked) ? '' : 'btn-disabled'}`}
+                disabled={pdfProgress < 100}
+                className={`btn btn-large btn-full-width ${pdfProgress === 100 ? '' : 'btn-disabled'}`}
                 style={{
                   padding: '15px 30px',
                   marginBottom: '15px'
                 }}
               >
-                {downloadClicked ? 'PDF DOWNLOADED' : 'DOWNLOAD PDF'}
+                DOWNLOAD PDF
               </button>
               <button
                 onClick={handleNewFile}
