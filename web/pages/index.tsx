@@ -188,13 +188,13 @@ export default function Home() {
                 >
                   CONNECTED
                   <span style={{
-                    width: '12px',
-                    height: '12px',
+                    // width: '12px',
+                    // height: '12px',
                     border: '2px solid #DDFFE7',
                     backgroundColor: '#343434',
                     display: 'inline-block',
                     lineHeight: '8px',
-                    paddingLeft: '2px'
+                    padding: '4px'
                   }}>X</span>
                 </button>
               ) : (
@@ -440,13 +440,11 @@ export default function Home() {
                   >
                     CONNECTED
                     <span style={{
-                      width: '12px',
-                      height: '12px',
                       border: '2px solid #DDFFE7',
                       backgroundColor: '#343434',
                       display: 'inline-block',
                       lineHeight: '8px',
-                      paddingLeft: '2px'
+                      padding: '4px'
                     }}>X</span>
                   </button>
                 ) : (
