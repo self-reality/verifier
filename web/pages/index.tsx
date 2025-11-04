@@ -380,15 +380,7 @@ export default function Home() {
               </div>
 
               <div className="text-xs" style={{ marginBottom: '15px' }}>
-                STATUS:
-                <div style={{ marginLeft: '10px', marginTop: '5px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
-                    {transactionStatus === 'sent' || transactionStatus === 'minted' ? '✓' : ' '} TRANSACTION SENT
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {transactionStatus === 'minted' ? '✓' : ' '} TRANSACTION MINED
-                  </div>
-                </div>
+                STATUS: <span className={transactionStatus === 'sent' || transactionStatus === 'minted' ? '' : 'text-disabled'}>TRANSACTION SENT</span> | <span className={transactionStatus === 'minted' ? '' : 'text-disabled'}>TRANSACTION MINED</span>
               </div>
 
               <div className="text-xs" style={{ marginBottom: '15px' }}>
