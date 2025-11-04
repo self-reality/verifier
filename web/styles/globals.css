@@ -1,0 +1,218 @@
+/* CSS Custom Properties */
+:root {
+  /* Colors */
+  --color-bg: #343434;
+  --color-accent: #DDFFE7;
+  --color-disabled: #888;
+  --color-disabled-bg: #222;
+  
+  /* Typography */
+  --font-pixel: 'Press Start 2P', monospace;
+  --font-size-xs: 8px;
+  --font-size-sm: 10px;
+  --font-size-md: 12px;
+  
+  /* Spacing */
+  --spacing-xs: 5px;
+  --spacing-sm: 8px;
+  --spacing-md: 10px;
+  --spacing-lg: 15px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 30px;
+  --spacing-3xl: 40px;
+  
+  /* Borders */
+  --border-thin: 2px solid var(--color-accent);
+  --border-thick: 3px solid var(--color-accent);
+  --border-dashed-thick: 3px dashed var(--color-accent);
+  
+  /* Other */
+  --line-height: 1.6;
+}
+
+/* Base Styles */
+body {
+  background-color: var(--color-bg);
+  margin: 0;
+  font-family: var(--font-pixel);
+  color: var(--color-accent);
+}
+
+/* Utility Classes */
+
+/* Buttons */
+.btn {
+  border: var(--border-thin);
+  background-color: var(--color-bg);
+  color: var(--color-accent);
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-xs);
+}
+
+.btn-large {
+  padding: 10px 20px;
+  font-size: var(--font-size-sm);
+}
+
+.btn-full-width {
+  width: 100%;
+}
+
+.btn-disabled {
+  background-color: var(--color-disabled-bg);
+  color: var(--color-disabled);
+  cursor: not-allowed;
+}
+
+.btn-x {
+  border: var(--border-thin);
+  background-color: var(--color-bg);
+  color: var(--color-accent);
+  cursor: pointer;
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-md);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.btn-x-inline {
+  border: var(--border-thin);
+  background-color: var(--color-bg);
+  display: inline-block;
+  line-height: 8px;
+  padding: 4px;
+}
+
+/* Boxes and Containers */
+.pixel-box {
+  border: var(--border-thick);
+  padding: var(--spacing-xl);
+  background-color: var(--color-bg);
+}
+
+.pixel-box-mb {
+  margin-bottom: var(--spacing-xl);
+}
+
+.pixel-header {
+  border: var(--border-thick);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  background-color: var(--color-bg);
+}
+
+.drop-zone {
+  border: var(--border-dashed-thick);
+  padding: var(--spacing-3xl);
+  text-align: center;
+  background-color: var(--color-bg);
+  cursor: pointer;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-lg);
+}
+
+/* Section Headers */
+.section-title {
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-lg);
+  text-transform: uppercase;
+  border-bottom: var(--border-thin);
+  padding-bottom: var(--font-size-xs);
+}
+
+.subsection-title {
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-lg);
+  text-transform: uppercase;
+}
+
+/* Text Utilities */
+.text-xs {
+  font-size: var(--font-size-xs);
+}
+
+.text-sm {
+  font-size: var(--font-size-sm);
+}
+
+.text-md {
+  font-size: var(--font-size-md);
+}
+
+.text-disabled {
+  color: var(--color-disabled);
+}
+
+.word-break-all {
+  word-break: break-all;
+}
+
+/* Inputs */
+.input-text {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: var(--border-thin);
+  background-color: var(--color-bg);
+  color: var(--color-accent);
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-xs);
+  margin-bottom: var(--spacing-xl);
+}
+
+.input-checkbox {
+  width: 12px;
+  height: 12px;
+  margin-top: 2px;
+}
+
+/* Overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.overlay-content {
+  border: var(--border-thick);
+  padding: var(--spacing-2xl);
+  background-color: var(--color-bg);
+  max-width: 500px;
+  width: 90%;
+}
+
+/* Logo */
+.logo {
+  width: 30px;
+  height: 30px;
+  border: var(--border-thin);
+  background-color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-bg);
+}
+
+/* Progress Bar */
+.progress-bar {
+  font-size: var(--font-size-md);
+  letter-spacing: 2px;
+}
+

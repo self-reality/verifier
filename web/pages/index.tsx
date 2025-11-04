@@ -26,30 +26,7 @@ export default function Home() {
   const isHashing = uploadProgress === 100 && hashProgress > 0 && hashProgress < 100;
   const isUploaded = hashProgress === 100;
 
-  // Shared X button styles
-  const xButtonStyle = {
-    border: '2px solid #DDFFE7',
-    backgroundColor: '#343434',
-    display: 'inline-block',
-    lineHeight: '8px',
-    padding: '4px'
-  };
-
-  const xButtonStandaloneStyle = {
-    border: '2px solid #DDFFE7',
-    backgroundColor: '#343434',
-    color: '#DDFFE7',
-    cursor: 'pointer',
-    fontFamily: "'Press Start 2P', monospace",
-    fontSize: '12px',
-    width: '24px',
-    height: '24px',
-    padding: '0',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    lineHeight: '1'
-  };
+  // These style objects are no longer needed - using CSS classes instead
 
   useEffect(() => {
     // Generate CID and set initial time only on client side to avoid hydration mismatch
@@ -207,94 +184,53 @@ export default function Home() {
         <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
       </Head>
       <div style={{
-        fontFamily: "'Press Start 2P', monospace",
-        backgroundColor: '#343434',
-        color: '#DDFFE7',
         minHeight: '100vh',
         padding: '20px',
-        fontSize: '10px',
-        lineHeight: '1.6'
+        fontSize: 'var(--font-size-sm)',
+        lineHeight: 'var(--line-height)'
       }}>
         {/* Header */}
-        <header style={{
-          border: '3px solid #DDFFE7',
-          padding: '15px',
-          marginBottom: '20px',
-          backgroundColor: '#343434'
-        }}>
+        <header className="pixel-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '30px',
-                height: '30px',
-                border: '2px solid #DDFFE7',
-                backgroundColor: '#DDFFE7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#343434'
-              }}>
+              <div className="logo">
                 P
               </div>
-              <span style={{ fontSize: '12px' }}>PROOF OF EXISTENCE</span>
+              <span className="text-md">PROOF OF EXISTENCE</span>
             </div>
             <div>
               {walletConnected ? (
                 <button
                   onClick={handleDisconnectWallet}
                   disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
+                  className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
                   style={{
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434',
-                    color: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
-                    padding: '8px 12px',
-                    cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'not-allowed' : 'pointer',
-                    fontFamily: "'Press Start 2P', monospace",
-                    fontSize: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px'
                   }}
                 >
                   CONNECTED
-                  <span style={{
-                    ...xButtonStyle,
-                    borderColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
-                    backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434'
-                  }}>X</span>
+                  <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
                 </button>
               ) : (
                 <button
                   onClick={handleConnectWallet}
-                  style={{
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    color: '#DDFFE7',
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                    fontFamily: "'Press Start 2P', monospace",
-                    fontSize: '8px'
-                  }}
+                  className="btn"
                 >
                   CONNECT WALLET
                 </button>
               )}
             </div>
           </div>
-          <div style={{ fontSize: '8px', color: '#DDFFE7' }}>
+          <div className="text-xs">
             VERIFY ANY DOC ON BLOCKCHAIN FOR JUST $1. (YOUR FILE NEVER LEAVES YOUR COMPUTER).
           </div>
         </header>
 
         {/* Upload Section */}
         <section style={{ marginBottom: '20px' }}>
-          <h2 style={{
-            fontSize: '12px',
-            marginBottom: '15px',
-            textTransform: 'uppercase',
-            borderBottom: '2px solid #DDFFE7',
-            paddingBottom: '8px'
-          }}>
+          <h2 className="section-title">
             1. UPLOAD
           </h2>
 
@@ -303,22 +239,10 @@ export default function Home() {
               ref={dropZoneRef}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              style={{
-                border: '3px dashed #DDFFE7',
-                padding: '40px',
-                textAlign: 'center',
-                backgroundColor: '#343434',
-                cursor: 'pointer',
-                minHeight: '150px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '15px'
-              }}
+              className="drop-zone"
               onClick={() => fileInputRef.current?.click()}
             >
-              <div style={{ fontSize: '10px' }}>
+              <div className="text-sm">
                 DROP YOUR FILE HERE OR...
               </div>
               <input
@@ -327,57 +251,37 @@ export default function Home() {
                 onChange={handleFileInput}
                 style={{ display: 'none' }}
               />
-              <button
-                style={{
-                  border: '2px solid #DDFFE7',
-                  backgroundColor: '#343434',
-                  color: '#DDFFE7',
-                  padding: '10px 20px',
-                  cursor: 'pointer',
-                  fontFamily: "'Press Start 2P', monospace",
-                  fontSize: '10px'
-                }}
-              >
+              <button className="btn btn-large">
                 SELECT
               </button>
             </div>
           )}
 
           {(isUploading || isHashing || isUploaded) && file && (
-            <div style={{
-              border: '3px solid #DDFFE7',
-              padding: '20px',
-              backgroundColor: '#343434'
-            }}>
+            <div className="pixel-box">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
-                <span style={{ fontSize: '10px' }}>{editedFilename || filename}</span>
+                <span className="text-sm">{editedFilename || filename}</span>
                 <button 
                   onClick={handleRemoveFile}
                   disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
-                  style={{
-                    ...xButtonStandaloneStyle,
-                    backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434',
-                    color: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
-                    borderColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
-                    cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'not-allowed' : 'pointer'
-                  }}>
+                  className={`btn-x ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>
                   X
                 </button>
               </div>
 
               {uploadProgress > 0 && (
                 <div style={{ marginBottom: '15px' }}>
-                  <div style={{ fontSize: '8px', marginBottom: '5px' }}>UPLOAD PROGRESS</div>
-                  <div style={{ fontSize: '12px', letterSpacing: '2px' }}>{renderProgressBar(uploadProgress)}</div>
-                  <div style={{ fontSize: '8px', marginTop: '5px' }}>{uploadProgress}%</div>
+                  <div className="text-xs" style={{ marginBottom: '5px' }}>UPLOAD PROGRESS</div>
+                  <div className="progress-bar">{renderProgressBar(uploadProgress)}</div>
+                  <div className="text-xs" style={{ marginTop: '5px' }}>{uploadProgress}%</div>
                 </div>
               )}
 
               {hashProgress > 0 && (
                 <div>
-                  <div style={{ fontSize: '8px', marginBottom: '5px' }}>HASHING PROGRESS</div>
-                  <div style={{ fontSize: '12px', letterSpacing: '2px' }}>{renderProgressBar(hashProgress)}</div>
-                  <div style={{ fontSize: '8px', marginTop: '5px' }}>{hashProgress}%</div>
+                  <div className="text-xs" style={{ marginBottom: '5px' }}>HASHING PROGRESS</div>
+                  <div className="progress-bar">{renderProgressBar(hashProgress)}</div>
+                  <div className="text-xs" style={{ marginTop: '5px' }}>{hashProgress}%</div>
                 </div>
               )}
             </div>
@@ -386,57 +290,37 @@ export default function Home() {
 
         {/* Anchor Section - Always visible, dimmed when inactive */}
         <section style={{ marginBottom: '20px', opacity: isUploaded ? 1 : 0.3 }}>
-          <h2 style={{
-            fontSize: '12px',
-            marginBottom: '15px',
-            textTransform: 'uppercase',
-            borderBottom: '2px solid #DDFFE7',
-            paddingBottom: '8px'
-          }}>
+          <h2 className="section-title">
             2. VERIFY ON CHAIN
           </h2>
 
             {/* Preview Section */}
-            <div style={{
-              border: '3px solid #DDFFE7',
-              padding: '20px',
-              marginBottom: '20px',
-              backgroundColor: '#343434'
-            }}>
-              <h3 style={{
-                fontSize: '10px',
-                marginBottom: '15px',
-                textTransform: 'uppercase'
-              }}>
+            <div className="pixel-box pixel-box-mb">
+              <h3 className="subsection-title">
                 ON-CHAIN CERTIFICATE PREVIEW
               </h3>
-              <div style={{ fontSize: '8px', marginBottom: '10px' }}>
+              <div className="text-xs" style={{ marginBottom: '10px' }}>
                 THIS WILL APPEAR ON-CHAIN:
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '8px' }}>YOUR WALLET ADDRESS: </span>
+                <span className="text-xs">YOUR WALLET ADDRESS: </span>
                 {walletConnected ? (
-                  <span style={{ fontSize: '8px', wordBreak: 'break-all' }}>{walletAddress}</span>
+                  <span className="text-xs word-break-all">{walletAddress}</span>
                 ) : (
-                  <span style={{ fontSize: '8px', color: '#888' }}>(CONNECT YOUR WALLET)</span>
+                  <span className="text-xs text-disabled">(CONNECT YOUR WALLET)</span>
                 )}
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '8px' }}>FILENAME: </span>
-                <span style={{ fontSize: '8px' }}>{editedFilename || filename}</span>
+                <span className="text-xs">FILENAME: </span>
+                <span className="text-xs">{editedFilename || filename}</span>
                 <button
                   onClick={() => setShowEditOverlay(true)}
                   disabled={!isUploaded || transactionStatus === 'sent' || transactionStatus === 'minted'}
+                  className={`btn ${(isUploaded && transactionStatus !== 'sent' && transactionStatus !== 'minted') ? '' : 'btn-disabled'}`}
                   style={{
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: (isUploaded && transactionStatus !== 'sent' && transactionStatus !== 'minted') ? '#343434' : '#222',
-                    color: (isUploaded && transactionStatus !== 'sent' && transactionStatus !== 'minted') ? '#DDFFE7' : '#888',
                     padding: '4px 8px',
-                    cursor: (isUploaded && transactionStatus !== 'sent' && transactionStatus !== 'minted') ? 'pointer' : 'not-allowed',
-                    fontFamily: "'Press Start 2P', monospace",
-                    fontSize: '8px',
                     marginLeft: '10px'
                   }}
                 >
@@ -445,36 +329,28 @@ export default function Home() {
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '8px' }}>CID: </span>
-                <span style={{ fontSize: '8px', wordBreak: 'break-all' }}>{mockCID}</span>
+                <span className="text-xs">CID: </span>
+                <span className="text-xs word-break-all">{mockCID}</span>
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '8px' }}>TIMESTAMP: </span>
-                <span style={{ fontSize: '8px' }}>{formatHumanTime(currentTime)} GMT</span>
+                <span className="text-xs">TIMESTAMP: </span>
+                <span className="text-xs">{formatHumanTime(currentTime)} GMT</span>
               </div>
 
               <div>
-                <span style={{ fontSize: '8px' }}>FEE: </span>
+                <span className="text-xs">FEE: </span>
                 {walletConnected ? (
-                  <span style={{ fontSize: '8px' }}>0.001 ETH (APPROX $1)</span>
+                  <span className="text-xs">0.001 ETH (APPROX $1)</span>
                 ) : (
-                  <span style={{ fontSize: '8px', color: '#888' }}>(CONNECT YOUR WALLET)</span>
+                  <span className="text-xs text-disabled">(CONNECT YOUR WALLET)</span>
                 )}
               </div>
             </div>
 
             {/* Transaction Section */}
-            <div style={{
-              border: '3px solid #DDFFE7',
-              padding: '20px',
-              backgroundColor: '#343434'
-            }}>
-              <h3 style={{
-                fontSize: '10px',
-                marginBottom: '15px',
-                textTransform: 'uppercase'
-              }}>
+            <div className="pixel-box">
+              <h3 className="subsection-title">
                 VERIFY ON CHAIN
               </h3>
 
@@ -483,45 +359,27 @@ export default function Home() {
                   <button
                     onClick={handleDisconnectWallet}
                     disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
+                    className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
                     style={{
-                      border: '2px solid #DDFFE7',
-                      backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434',
-                      color: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
-                      padding: '8px 12px',
-                      cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'not-allowed' : 'pointer',
-                      fontFamily: "'Press Start 2P', monospace",
-                      fontSize: '8px',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px'
                     }}
                   >
                     CONNECTED
-                    <span style={{
-                      ...xButtonStyle,
-                      borderColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
-                      backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434'
-                    }}>X</span>
+                    <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
                   </button>
                 ) : (
                   <button
                     onClick={handleConnectWallet}
-                    style={{
-                      border: '2px solid #DDFFE7',
-                      backgroundColor: '#343434',
-                      color: '#DDFFE7',
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      fontFamily: "'Press Start 2P', monospace",
-                      fontSize: '8px'
-                    }}
+                    className="btn"
                   >
                     CONNECT WALLET
                   </button>
                 )}
               </div>
 
-              <div style={{ marginBottom: '15px', fontSize: '8px' }}>
+              <div className="text-xs" style={{ marginBottom: '15px' }}>
                 STATUS:
                 <div style={{ marginLeft: '10px', marginTop: '5px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
@@ -533,13 +391,13 @@ export default function Home() {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '15px', fontSize: '8px' }}>
+              <div className="text-xs" style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
                     checked={termsAccepted}
                     onChange={(e) => setTermsAccepted(e.target.checked)}
-                    style={{ width: '12px', height: '12px', marginTop: '2px' }}
+                    className="input-checkbox"
                   />
                   <span>
                     FILE NEVER LEAVES YOUR COMPUTER. KEEP IT SAFE & UNMODIFIED TO VERIFY LATER.
@@ -550,16 +408,7 @@ export default function Home() {
               <button
                 onClick={handleVerifyOnChain}
                 disabled={!isUploaded || !walletConnected || !termsAccepted || transactionStatus === 'minted'}
-                style={{
-                  border: '2px solid #DDFFE7',
-                  backgroundColor: isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' ? '#343434' : '#222',
-                  color: isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' ? '#DDFFE7' : '#888',
-                  padding: '10px 20px',
-                  cursor: isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' ? 'pointer' : 'not-allowed',
-                  fontFamily: "'Press Start 2P', monospace",
-                  fontSize: '10px',
-                  width: '100%'
-                }}
+                className={`btn btn-large btn-full-width ${isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' ? '' : 'btn-disabled'}`}
               >
                 VERIFY ON CHAIN
               </button>
@@ -568,90 +417,68 @@ export default function Home() {
 
         {/* Certificate Section - Always visible, dimmed when inactive */}
         <section style={{ opacity: transactionStatus === 'minted' ? 1 : 0.3 }}>
-          <h2 style={{
-            fontSize: '12px',
-            marginBottom: '15px',
-            textTransform: 'uppercase',
-            borderBottom: '2px solid #DDFFE7',
-            paddingBottom: '8px'
-          }}>
+          <h2 className="section-title">
             3. DOWNLOAD PDF CERTIFICATE
           </h2>
 
             {/* Certificate Info Section */}
-            <div style={{
-              border: '3px solid #DDFFE7',
-              padding: '20px',
-              marginBottom: '20px',
-              backgroundColor: '#343434'
-            }}>
-              <div style={{ fontSize: '8px', marginBottom: '15px' }}>
+            <div className="pixel-box pixel-box-mb">
+              <div className="text-xs" style={{ marginBottom: '15px' }}>
                 THE CERTIFICATE INCLUDES:
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '8px' }}>NETWORK NAME: </span>
+                <span className="text-xs">NETWORK NAME: </span>
                 {walletConnected ? (
-                  <span style={{ fontSize: '8px' }}>ETHEREUM MAINNET</span>
+                  <span className="text-xs">ETHEREUM MAINNET</span>
                 ) : (
-                  <span style={{ fontSize: '8px', color: '#888' }}>(CONNECT YOUR WALLET)</span>
+                  <span className="text-xs text-disabled">(CONNECT YOUR WALLET)</span>
                 )}
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '8px' }}>TRANSACTION HASH: </span>
+                <span className="text-xs">TRANSACTION HASH: </span>
                 {transactionHash ? (
-                  <span style={{ fontSize: '8px', wordBreak: 'break-all' }}>{transactionHash}</span>
+                  <span className="text-xs word-break-all">{transactionHash}</span>
                 ) : (
-                  <span style={{ fontSize: '8px', color: '#888' }}>(SEND VERIFICATION TRANSACTION)</span>
+                  <span className="text-xs text-disabled">(SEND VERIFICATION TRANSACTION)</span>
                 )}
               </div>
 
               <div style={{ marginBottom: '15px' }}>
-                <span style={{ fontSize: '8px' }}>TRANSACTION URL: </span>
+                <span className="text-xs">TRANSACTION URL: </span>
                 {transactionHash ? (
-                  <span style={{ fontSize: '8px', wordBreak: 'break-all' }}>
+                  <span className="text-xs word-break-all">
                     HTTPS://ETHERSCAN.IO/TX/{transactionHash}
                   </span>
                 ) : (
-                  <span style={{ fontSize: '8px', color: '#888' }}>(SEND VERIFICATION TRANSACTION)</span>
+                  <span className="text-xs text-disabled">(SEND VERIFICATION TRANSACTION)</span>
                 )}
               </div>
 
-              <div style={{ fontSize: '8px', color: '#DDFFE7', marginBottom: pdfProgress > 0 ? '15px' : '0' }}>
+              <div className="text-xs" style={{ marginBottom: pdfProgress > 0 ? '15px' : '0' }}>
                 ADDITIONALLY: ALL OF THE ON-CHAIN DATA FROM ANCHOR SECTION ABOVE, TRANSACTION URL QR, VERIFICATION INSTRUCTIONS, LEGAL INFO.
               </div>
 
               {pdfProgress > 0 && (
                 <div>
-                  <div style={{ fontSize: '8px', marginBottom: '5px' }}>PDF GENERATION PROGRESS</div>
-                  <div style={{ fontSize: '12px', letterSpacing: '2px' }}>{renderProgressBar(pdfProgress)}</div>
-                  <div style={{ fontSize: '8px', marginTop: '5px' }}>{pdfProgress}%</div>
+                  <div className="text-xs" style={{ marginBottom: '5px' }}>PDF GENERATION PROGRESS</div>
+                  <div className="progress-bar">{renderProgressBar(pdfProgress)}</div>
+                  <div className="text-xs" style={{ marginTop: '5px' }}>{pdfProgress}%</div>
                 </div>
               )}
             </div>
 
             {/* Download Section */}
-            <div style={{
-              border: '3px solid #DDFFE7',
-              padding: '20px',
-              backgroundColor: '#343434',
-              textAlign: 'center'
-            }}>
+            <div className="pixel-box" style={{ textAlign: 'center' }}>
               <button
                 onClick={() => {
                   setDownloadClicked(true);
                 }}
                 disabled={pdfProgress < 100 || downloadClicked}
+                className={`btn btn-large btn-full-width ${(pdfProgress === 100 && !downloadClicked) ? '' : 'btn-disabled'}`}
                 style={{
-                  border: '2px solid #DDFFE7',
-                  backgroundColor: (pdfProgress === 100 && !downloadClicked) ? '#343434' : '#222',
-                  color: (pdfProgress === 100 && !downloadClicked) ? '#DDFFE7' : '#888',
                   padding: '15px 30px',
-                  cursor: (pdfProgress === 100 && !downloadClicked) ? 'pointer' : 'not-allowed',
-                  fontFamily: "'Press Start 2P', monospace",
-                  fontSize: '10px',
-                  width: '100%',
                   marginBottom: '15px'
                 }}
               >
@@ -660,15 +487,9 @@ export default function Home() {
               <button
                 onClick={handleNewFile}
                 disabled={transactionStatus !== 'minted' || !downloadClicked}
+                className={`btn btn-large btn-full-width ${(transactionStatus === 'minted' && downloadClicked) ? '' : 'btn-disabled'}`}
                 style={{
-                  border: '2px solid #DDFFE7',
-                  backgroundColor: (transactionStatus === 'minted' && downloadClicked) ? '#343434' : '#222',
-                  color: (transactionStatus === 'minted' && downloadClicked) ? '#DDFFE7' : '#888',
-                  padding: '15px 30px',
-                  cursor: (transactionStatus === 'minted' && downloadClicked) ? 'pointer' : 'not-allowed',
-                  fontFamily: "'Press Start 2P', monospace",
-                  fontSize: '10px',
-                  width: '100%'
+                  padding: '15px 30px'
                 }}
               >
                 NEW FILE
@@ -678,46 +499,16 @@ export default function Home() {
 
         {/* Edit Filename Overlay */}
         {showEditOverlay && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              border: '3px solid #DDFFE7',
-              padding: '30px',
-              backgroundColor: '#343434',
-              maxWidth: '500px',
-              width: '90%'
-            }}>
-              <h3 style={{
-                fontSize: '10px',
-                marginBottom: '20px',
-                textTransform: 'uppercase'
-              }}>
+          <div className="overlay">
+            <div className="overlay-content">
+              <h3 className="subsection-title">
                 EDIT FILENAME
               </h3>
               <input
                 type="text"
                 value={editedFilename}
                 onChange={(e) => setEditedFilename(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  border: '2px solid #DDFFE7',
-                  backgroundColor: '#343434',
-                  color: '#DDFFE7',
-                  fontFamily: "'Press Start 2P', monospace",
-                  fontSize: '8px',
-                  marginBottom: '20px'
-                }}
+                className="input-text"
               />
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
@@ -725,31 +516,15 @@ export default function Home() {
                     setEditedFilename(filename);
                     setShowEditOverlay(false);
                   }}
-                  style={{
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    color: '#DDFFE7',
-                    padding: '10px 20px',
-                    cursor: 'pointer',
-                    fontFamily: "'Press Start 2P', monospace",
-                    fontSize: '8px',
-                    flex: 1
-                  }}
+                  className="btn btn-large"
+                  style={{ flex: 1 }}
                 >
                   CANCEL
                 </button>
                 <button
                   onClick={() => setShowEditOverlay(false)}
-                  style={{
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    color: '#DDFFE7',
-                    padding: '10px 20px',
-                    cursor: 'pointer',
-                    fontFamily: "'Press Start 2P', monospace",
-                    fontSize: '8px',
-                    flex: 1
-                  }}
+                  className="btn btn-large"
+                  style={{ flex: 1 }}
                 >
                   SAVE
                 </button>
@@ -760,27 +535,9 @@ export default function Home() {
 
         {/* Reset Confirmation Overlay */}
         {showResetConfirmOverlay && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}>
-            <div style={{
-              border: '3px solid #DDFFE7',
-              padding: '30px',
-              backgroundColor: '#343434',
-              maxWidth: '500px',
-              width: '90%'
-            }}>
-              <div style={{
-                fontSize: '8px',
+          <div className="overlay">
+            <div className="overlay-content">
+              <div className="text-xs" style={{
                 marginBottom: '20px',
                 lineHeight: '1.8'
               }}>
@@ -789,29 +546,13 @@ export default function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <button
                   onClick={handleConfirmReset}
-                  style={{
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    color: '#DDFFE7',
-                    padding: '10px 20px',
-                    cursor: 'pointer',
-                    fontFamily: "'Press Start 2P', monospace",
-                    fontSize: '8px'
-                  }}
+                  className="btn btn-large"
                 >
                   YES, I SAVED IT
                 </button>
                 <button
                   onClick={() => setShowResetConfirmOverlay(false)}
-                  style={{
-                    border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    color: '#DDFFE7',
-                    padding: '10px 20px',
-                    cursor: 'pointer',
-                    fontFamily: "'Press Start 2P', monospace",
-                    fontSize: '8px'
-                  }}
+                  className="btn btn-large"
                 >
                   NO, LET ME SAVE IT
                 </button>
