@@ -5,9 +5,6 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hashProgress, setHashProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isHashing, setIsHashing] = useState(false);
-  const [isUploaded, setIsUploaded] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [filename, setFilename] = useState('');
@@ -23,6 +20,11 @@ export default function Home() {
   const [pdfProgress, setPdfProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // Derived states from progress values
+  const isUploading = uploadProgress > 0 && uploadProgress < 100;
+  const isHashing = uploadProgress === 100 && hashProgress > 0 && hashProgress < 100;
+  const isUploaded = hashProgress === 100;
 
   // Shared X button styles
   const xButtonStyle = {
@@ -61,29 +63,25 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (isUploading && uploadProgress < 100) {
+    if (uploadProgress > 0 && uploadProgress < 100) {
       const timer = setTimeout(() => {
         setUploadProgress(prev => Math.min(prev + 5, 100));
       }, 30);
       return () => clearTimeout(timer);
-    } else if (isUploading && uploadProgress === 100) {
-      setIsUploading(false);
-      setIsHashing(true);
-      setHashProgress(0);
+    } else if (uploadProgress === 100 && hashProgress === 0) {
+      // Automatically start hashing when upload completes
+      setHashProgress(1);
     }
-  }, [isUploading, uploadProgress]);
+  }, [uploadProgress, hashProgress]);
 
   useEffect(() => {
-    if (isHashing && hashProgress < 100) {
+    if (hashProgress > 0 && hashProgress < 100) {
       const timer = setTimeout(() => {
         setHashProgress(prev => Math.min(prev + 5, 100));
       }, 30);
       return () => clearTimeout(timer);
-    } else if (isHashing && hashProgress === 100) {
-      setIsHashing(false);
-      setIsUploaded(true);
     }
-  }, [isHashing, hashProgress]);
+  }, [hashProgress]);
 
   useEffect(() => {
     if (pdfProgress > 0 && pdfProgress < 100) {
@@ -105,10 +103,8 @@ export default function Home() {
     setFile(selectedFile);
     setFilename(selectedFile.name);
     setEditedFilename(selectedFile.name);
-    setUploadProgress(0);
     setHashProgress(0);
-    setIsUploading(true);
-    setIsUploaded(false);
+    setUploadProgress(1); // Kick off upload progress
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -136,9 +132,6 @@ export default function Home() {
     setEditedFilename('');
     setUploadProgress(0);
     setHashProgress(0);
-    setIsUploading(false);
-    setIsHashing(false);
-    setIsUploaded(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -155,9 +148,6 @@ export default function Home() {
     setEditedFilename('');
     setUploadProgress(0);
     setHashProgress(0);
-    setIsUploading(false);
-    setIsHashing(false);
-    setIsUploaded(false);
     setTransactionStatus('idle');
     setTransactionHash('');
     setTermsAccepted(false);
