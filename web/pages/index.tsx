@@ -17,6 +17,7 @@ export default function Home() {
   const [transactionHash, setTransactionHash] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
   const [mockCID, setMockCID] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -484,6 +485,8 @@ export default function Home() {
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
                     style={{ width: '12px', height: '12px', marginTop: '2px' }}
                   />
                   <span>
@@ -494,13 +497,13 @@ export default function Home() {
 
               <button
                 onClick={handleVerifyOnChain}
-                disabled={!walletConnected || transactionStatus === 'minted'}
+                disabled={!isUploaded || !walletConnected || !termsAccepted || transactionStatus === 'minted'}
                 style={{
                   border: '2px solid #DDFFE7',
-                  backgroundColor: walletConnected && transactionStatus !== 'minted' ? '#343434' : '#222',
-                  color: walletConnected && transactionStatus !== 'minted' ? '#DDFFE7' : '#888',
+                  backgroundColor: isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' ? '#343434' : '#222',
+                  color: isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' ? '#DDFFE7' : '#888',
                   padding: '10px 20px',
-                  cursor: walletConnected && transactionStatus !== 'minted' ? 'pointer' : 'not-allowed',
+                  cursor: isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' ? 'pointer' : 'not-allowed',
                   fontFamily: "'Press Start 2P', monospace",
                   fontSize: '10px',
                   width: '100%'
