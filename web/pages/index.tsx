@@ -125,6 +125,24 @@ export default function Home() {
     }
   };
 
+  const handleNewFile = () => {
+    // Reset file and transaction state, but keep wallet connected
+    setFile(null);
+    setFilename('');
+    setEditedFilename('');
+    setUploadProgress(0);
+    setHashProgress(0);
+    setIsUploading(false);
+    setIsHashing(false);
+    setIsUploaded(false);
+    setTransactionStatus('idle');
+    setTransactionHash('');
+    setTermsAccepted(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleConnectWallet = () => {
     setWalletConnected(true);
     setWalletAddress('0x' + Math.random().toString(16).substr(2, 40));
@@ -206,12 +224,13 @@ export default function Home() {
               {walletConnected ? (
                 <button
                   onClick={handleDisconnectWallet}
+                  disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
                   style={{
                     border: '2px solid #DDFFE7',
-                    backgroundColor: '#343434',
-                    color: '#DDFFE7',
+                    backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434',
+                    color: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
                     padding: '8px 12px',
-                    cursor: 'pointer',
+                    cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'not-allowed' : 'pointer',
                     fontFamily: "'Press Start 2P', monospace",
                     fontSize: '8px',
                     display: 'flex',
@@ -220,7 +239,11 @@ export default function Home() {
                   }}
                 >
                   CONNECTED
-                  <span style={xButtonStyle}>X</span>
+                  <span style={{
+                    ...xButtonStyle,
+                    borderColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
+                    backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434'
+                  }}>X</span>
                 </button>
               ) : (
                 <button
@@ -310,7 +333,16 @@ export default function Home() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
                 <span style={{ fontSize: '10px' }}>{editedFilename || filename}</span>
-                <button onClick={handleRemoveFile} style={xButtonStandaloneStyle}>
+                <button 
+                  onClick={handleRemoveFile}
+                  disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
+                  style={{
+                    ...xButtonStandaloneStyle,
+                    backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434',
+                    color: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
+                    borderColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
+                    cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'not-allowed' : 'pointer'
+                  }}>
                   X
                 </button>
               </div>
@@ -378,13 +410,13 @@ export default function Home() {
                 <span style={{ fontSize: '8px' }}>{editedFilename || filename}</span>
                 <button
                   onClick={() => setShowEditOverlay(true)}
-                  disabled={!isUploaded}
+                  disabled={!isUploaded || transactionStatus === 'sent' || transactionStatus === 'minted'}
                   style={{
                     border: '2px solid #DDFFE7',
-                    backgroundColor: isUploaded ? '#343434' : '#222',
-                    color: isUploaded ? '#DDFFE7' : '#888',
+                    backgroundColor: (isUploaded && transactionStatus !== 'sent' && transactionStatus !== 'minted') ? '#343434' : '#222',
+                    color: (isUploaded && transactionStatus !== 'sent' && transactionStatus !== 'minted') ? '#DDFFE7' : '#888',
                     padding: '4px 8px',
-                    cursor: isUploaded ? 'pointer' : 'not-allowed',
+                    cursor: (isUploaded && transactionStatus !== 'sent' && transactionStatus !== 'minted') ? 'pointer' : 'not-allowed',
                     fontFamily: "'Press Start 2P', monospace",
                     fontSize: '8px',
                     marginLeft: '10px'
@@ -432,12 +464,13 @@ export default function Home() {
                 {walletConnected ? (
                   <button
                     onClick={handleDisconnectWallet}
+                    disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
                     style={{
                       border: '2px solid #DDFFE7',
-                      backgroundColor: '#343434',
-                      color: '#DDFFE7',
+                      backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434',
+                      color: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
                       padding: '8px 12px',
-                      cursor: 'pointer',
+                      cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'not-allowed' : 'pointer',
                       fontFamily: "'Press Start 2P', monospace",
                       fontSize: '8px',
                       display: 'flex',
@@ -446,7 +479,11 @@ export default function Home() {
                     }}
                   >
                     CONNECTED
-                    <span style={xButtonStyle}>X</span>
+                    <span style={{
+                      ...xButtonStyle,
+                      borderColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#888' : '#DDFFE7',
+                      backgroundColor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? '#222' : '#343434'
+                    }}>X</span>
                   </button>
                 ) : (
                   <button
@@ -587,10 +624,27 @@ export default function Home() {
                   cursor: 'pointer',
                   fontFamily: "'Press Start 2P', monospace",
                   fontSize: '10px',
-                  width: '100%'
+                  width: '100%',
+                  marginBottom: '15px'
                 }}
               >
                 DOWNLOAD PDF
+              </button>
+              <button
+                onClick={handleNewFile}
+                disabled={transactionStatus !== 'minted'}
+                style={{
+                  border: '2px solid #DDFFE7',
+                  backgroundColor: transactionStatus === 'minted' ? '#343434' : '#222',
+                  color: transactionStatus === 'minted' ? '#DDFFE7' : '#888',
+                  padding: '15px 30px',
+                  cursor: transactionStatus === 'minted' ? 'pointer' : 'not-allowed',
+                  fontFamily: "'Press Start 2P', monospace",
+                  fontSize: '10px',
+                  width: '100%'
+                }}
+              >
+                NEW FILE
               </button>
             </div>
         </section>
