@@ -62,8 +62,8 @@ export default function Home() {
   useEffect(() => {
     if (isUploading && uploadProgress < 100) {
       const timer = setTimeout(() => {
-        setUploadProgress(prev => Math.min(prev + 2, 100));
-      }, 50);
+        setUploadProgress(prev => Math.min(prev + 5, 100));
+      }, 30);
       return () => clearTimeout(timer);
     } else if (isUploading && uploadProgress === 100) {
       setIsUploading(false);
@@ -75,8 +75,8 @@ export default function Home() {
   useEffect(() => {
     if (isHashing && hashProgress < 100) {
       const timer = setTimeout(() => {
-        setHashProgress(prev => Math.min(prev + 3, 100));
-      }, 50);
+        setHashProgress(prev => Math.min(prev + 5, 100));
+      }, 30);
       return () => clearTimeout(timer);
     } else if (isHashing && hashProgress === 100) {
       setIsHashing(false);
@@ -357,7 +357,7 @@ export default function Home() {
                 </button>
               </div>
 
-              {isUploading && (
+              {uploadProgress > 0 && (
                 <div style={{ marginBottom: '15px' }}>
                   <div style={{ fontSize: '8px', marginBottom: '5px' }}>UPLOAD PROGRESS</div>
                   <div style={{ fontSize: '12px', letterSpacing: '2px' }}>{renderProgressBar(uploadProgress)}</div>
@@ -365,7 +365,7 @@ export default function Home() {
                 </div>
               )}
 
-              {isHashing && (
+              {hashProgress > 0 && (
                 <div>
                   <div style={{ fontSize: '8px', marginBottom: '5px' }}>HASHING PROGRESS</div>
                   <div style={{ fontSize: '12px', letterSpacing: '2px' }}>{renderProgressBar(hashProgress)}</div>
