@@ -20,6 +20,8 @@ export default function Home() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [downloadClicked, setDownloadClicked] = useState(false);
   const [showResetConfirmOverlay, setShowResetConfirmOverlay] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState(0);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +86,24 @@ export default function Home() {
     }
   }, [isHashing, hashProgress]);
 
+  useEffect(() => {
+    if (isGeneratingPdf && pdfProgress < 100) {
+      const timer = setTimeout(() => {
+        setPdfProgress(prev => Math.min(prev + 5, 100));
+      }, 30);
+      return () => clearTimeout(timer);
+    } else if (isGeneratingPdf && pdfProgress === 100) {
+      setIsGeneratingPdf(false);
+    }
+  }, [isGeneratingPdf, pdfProgress]);
+
+  useEffect(() => {
+    // Start PDF generation automatically when transaction is minted
+    if (transactionStatus === 'minted' && !isGeneratingPdf && pdfProgress === 0) {
+      setIsGeneratingPdf(true);
+    }
+  }, [transactionStatus, isGeneratingPdf, pdfProgress]);
+
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
     setFilename(selectedFile.name);
@@ -145,6 +165,8 @@ export default function Home() {
     setTransactionHash('');
     setTermsAccepted(false);
     setDownloadClicked(false);
+    setPdfProgress(0);
+    setIsGeneratingPdf(false);
     setShowResetConfirmOverlay(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -610,9 +632,17 @@ export default function Home() {
                 )}
               </div>
 
-              <div style={{ fontSize: '8px', color: '#DDFFE7' }}>
+              <div style={{ fontSize: '8px', color: '#DDFFE7', marginBottom: pdfProgress > 0 ? '15px' : '0' }}>
                 ADDITIONALLY: ALL OF THE ON-CHAIN DATA FROM ANCHOR SECTION ABOVE, TRANSACTION URL QR, VERIFICATION INSTRUCTIONS, LEGAL INFO.
               </div>
+
+              {pdfProgress > 0 && (
+                <div>
+                  <div style={{ fontSize: '8px', marginBottom: '5px' }}>PDF GENERATION PROGRESS</div>
+                  <div style={{ fontSize: '12px', letterSpacing: '2px' }}>{renderProgressBar(pdfProgress)}</div>
+                  <div style={{ fontSize: '8px', marginTop: '5px' }}>{pdfProgress}%</div>
+                </div>
+              )}
             </div>
 
             {/* Download Section */}
@@ -623,20 +653,23 @@ export default function Home() {
               textAlign: 'center'
             }}>
               <button
-                onClick={() => setDownloadClicked(true)}
+                onClick={() => {
+                  setDownloadClicked(true);
+                }}
+                disabled={pdfProgress < 100 || downloadClicked}
                 style={{
                   border: '2px solid #DDFFE7',
-                  backgroundColor: '#343434',
-                  color: '#DDFFE7',
+                  backgroundColor: (pdfProgress === 100 && !downloadClicked) ? '#343434' : '#222',
+                  color: (pdfProgress === 100 && !downloadClicked) ? '#DDFFE7' : '#888',
                   padding: '15px 30px',
-                  cursor: 'pointer',
+                  cursor: (pdfProgress === 100 && !downloadClicked) ? 'pointer' : 'not-allowed',
                   fontFamily: "'Press Start 2P', monospace",
                   fontSize: '10px',
                   width: '100%',
                   marginBottom: '15px'
                 }}
               >
-                DOWNLOAD PDF
+                {downloadClicked ? 'PDF DOWNLOADED' : 'DOWNLOAD PDF'}
               </button>
               <button
                 onClick={handleNewFile}
