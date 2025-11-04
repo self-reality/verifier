@@ -15,11 +15,16 @@ export default function Home() {
   const [showEditOverlay, setShowEditOverlay] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<'idle' | 'sent' | 'minted'>('idle');
   const [transactionHash, setTransactionHash] = useState('');
-  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [currentTime, setCurrentTime] = useState(0);
+  const [mockCID, setMockCID] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Generate CID and set initial time only on client side to avoid hydration mismatch
+    setMockCID('Qm' + Math.random().toString(36).substr(2, 43));
+    setCurrentTime(Date.now());
+    
     const timer = setInterval(() => {
       setCurrentTime(Date.now());
     }, 1000);
@@ -127,8 +132,6 @@ export default function Home() {
     const filled = Math.floor((progress / 100) * blocks);
     return '█'.repeat(filled) + '░'.repeat(blocks - filled);
   };
-
-  const mockCID = 'Qm' + Math.random().toString(36).substr(2, 43);
 
   return (
     <>
@@ -326,18 +329,17 @@ export default function Home() {
           )}
         </section>
 
-        {/* Anchor Section - Only show when uploaded */}
-        {isUploaded && (
-          <section style={{ marginBottom: '20px' }}>
-            <h2 style={{
-              fontSize: '12px',
-              marginBottom: '15px',
-              textTransform: 'uppercase',
-              borderBottom: '2px solid #DDFFE7',
-              paddingBottom: '8px'
-            }}>
-              2. VERIFY ON CHAIN
-            </h2>
+        {/* Anchor Section - Always visible, dimmed when inactive */}
+        <section style={{ marginBottom: '20px', opacity: isUploaded ? 1 : 0.3 }}>
+          <h2 style={{
+            fontSize: '12px',
+            marginBottom: '15px',
+            textTransform: 'uppercase',
+            borderBottom: '2px solid #DDFFE7',
+            paddingBottom: '8px'
+          }}>
+            2. VERIFY ON CHAIN
+          </h2>
 
             {/* Preview Section */}
             <div style={{
@@ -509,21 +511,19 @@ export default function Home() {
                 VERIFY ON CHAIN
               </button>
             </div>
-          </section>
-        )}
+        </section>
 
-        {/* Certificate Section - Only show when transaction is minted */}
-        {transactionStatus === 'minted' && (
-          <section>
-            <h2 style={{
-              fontSize: '12px',
-              marginBottom: '15px',
-              textTransform: 'uppercase',
-              borderBottom: '2px solid #DDFFE7',
-              paddingBottom: '8px'
-            }}>
-              3. DOWNLOAD PDF CERTIFICATE
-            </h2>
+        {/* Certificate Section - Always visible, dimmed when inactive */}
+        <section style={{ opacity: transactionStatus === 'minted' ? 1 : 0.3 }}>
+          <h2 style={{
+            fontSize: '12px',
+            marginBottom: '15px',
+            textTransform: 'uppercase',
+            borderBottom: '2px solid #DDFFE7',
+            paddingBottom: '8px'
+          }}>
+            3. DOWNLOAD PDF CERTIFICATE
+          </h2>
 
             {/* Certificate Info Section */}
             <div style={{
@@ -592,8 +592,7 @@ export default function Home() {
                 DOWNLOAD PDF
               </button>
             </div>
-          </section>
-        )}
+        </section>
 
         {/* Edit Filename Overlay */}
         {showEditOverlay && (
