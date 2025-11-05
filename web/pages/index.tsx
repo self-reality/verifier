@@ -22,7 +22,7 @@ export default function Home() {
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   // Message states for each section
-  const [uploadMessage, setUploadMessage] = useState('[ WARNING !!! ]: File size exceeds recommended limit of 10MB');
+  const [uploadMessage, setUploadMessage] = useState('[ WARNING !!! ]: File size exceeds recommended limit of 10MB\n[ WARNING !!! ]: File size exceeds recommended limit of 10MB');
   const [verifyMessage, setVerifyMessage] = useState('[ ERROR !!! ]: Insufficient funds for transaction fee');
   const [downloadMessage, setDownloadMessage] = useState('[ INFO ]: PDF generation may take up to 30 seconds');
 
@@ -239,12 +239,6 @@ export default function Home() {
             1. UPLOAD
           </h2>
 
-          {uploadMessage && editedFilename !== 'hide' && (
-            <div className="message-box">
-              {uploadMessage}
-            </div>
-          )}
-
           {!file && !isUploading && !isHashing && !isUploaded && (
             <div
               ref={dropZoneRef}
@@ -296,7 +290,15 @@ export default function Home() {
                 </div>
               )}
             </div>
+            
           )}
+
+          {uploadMessage && (
+            <div className="message-box">
+              {uploadMessage}
+            </div>
+          )}
+
         </section>
 
         {/* Anchor Section - Always visible, dimmed when inactive */}
@@ -304,12 +306,6 @@ export default function Home() {
           <h2 className="section-title">
             2. VERIFY ON CHAIN
           </h2>
-
-          {verifyMessage && editedFilename !== 'hide' && (
-            <div className="message-box">
-              {verifyMessage}
-            </div>
-          )}
 
             {/* Preview Section */}
             <div className="pixel-box pixel-box-mb">
@@ -422,6 +418,13 @@ export default function Home() {
                 VERIFY ON CHAIN
               </button>
             </div>
+
+          {verifyMessage && editedFilename !== 'hide' && (
+            <div className="message-box">
+              {verifyMessage}
+            </div>
+          )}
+
         </section>
 
         {/* Certificate Section - Always visible, dimmed when inactive */}
@@ -429,12 +432,6 @@ export default function Home() {
           <h2 className="section-title">
             3. DOWNLOAD PDF CERTIFICATE
           </h2>
-
-          {downloadMessage && editedFilename !== 'hide' && (
-            <div className="message-box">
-              {downloadMessage}
-            </div>
-          )}
 
             {/* Certificate Info Section */}
             <div className="pixel-box pixel-box-mb">
@@ -510,6 +507,13 @@ export default function Home() {
                 NEW FILE
               </button>
             </div>
+
+          {downloadMessage && editedFilename !== 'hide' && (
+            <div className="message-box">
+              {downloadMessage}
+            </div>
+          )}
+
         </section>
 
         {/* Edit Filename Overlay */}

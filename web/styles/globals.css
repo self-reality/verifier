@@ -234,7 +234,6 @@ body {
 
 /* Message Box */
 .message-box {
-  border: var(--border-thin);
   padding: var(--spacing-md);
   background-color: #000;
   color: var(--color-accent);
