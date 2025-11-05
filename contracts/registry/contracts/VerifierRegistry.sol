@@ -11,7 +11,6 @@ contract VerifierRegistry is Ownable {
     }
 
     event Anchored(address indexed submitter, string indexed cid, string indexed filename, uint256 timestamp, uint256 paid);
-    event AnchoredNoValidation(address indexed submitter, string indexed cid, string indexed filename, uint256 timestamp, uint256 paid);
     event AnchoredCidOnly(address indexed submitter, string indexed cid, uint256 timestamp, uint256 paid);
     event AnchoredBytes32(address indexed submitter, bytes32 indexed hash, uint256 timestamp, uint256 paid);
 
@@ -32,12 +31,6 @@ contract VerifierRegistry is Ownable {
     function anchor(string calldata cid, string calldata filename) external payable {
         require(msg.value >= minFee && msg.value <= maxFee, "fee not met");
         emit Anchored(msg.sender, cid, filename, block.timestamp, msg.value);
-    }
-
-    // Version without validation (but with both cid and filename)
-    function anchorNoValidation(string calldata cid, string calldata filename) external payable {
-        require(msg.value >= minFee && msg.value <= maxFee, "fee not met");
-        emit AnchoredNoValidation(msg.sender, cid, filename, block.timestamp, msg.value);
     }
 
     // Version with only CID (no filename, no validation)

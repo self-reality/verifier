@@ -42,50 +42,6 @@ describe('Gas Estimation for Anchor Functions', function () {
     });
   });
 
-  describe('anchorNoValidation() - no validation', function () {
-    it('estimates gas cost for anchor without validation', async function () {
-      const [owner] = await ethers.getSigners();
-      const registry = await deploy(owner.address);
-
-      const tx = await registry.anchorNoValidation(validCid, validFilename, { value: validValue });
-      const receipt = await tx.wait();
-
-      console.log('      anchorNoValidation() gas used:', receipt.gasUsed.toString());
-      expect(Number(receipt.gasUsed)).to.be.lessThan(100000);
-    });
-
-    it('accepts invalid CID (no validation)', async function () {
-      const [owner] = await ethers.getSigners();
-      const registry = await deploy(owner.address);
-
-      const invalidCid = 'invalid-cid-123';
-      await expect(registry.anchorNoValidation(invalidCid, validFilename, { value: validValue })).to.not.be.reverted;
-    });
-
-    it('accepts invalid filename (no validation)', async function () {
-      const [owner] = await ethers.getSigners();
-      const registry = await deploy(owner.address);
-
-      const invalidFilename = 'UPPERCASE AND SPACES.PDF';
-      await expect(registry.anchorNoValidation(validCid, invalidFilename, { value: validValue })).to.not.be.reverted;
-    });
-
-    it('verifies event emission', async function () {
-      const [owner] = await ethers.getSigners();
-      const registry = await deploy(owner.address);
-
-      const tx = await registry.anchorNoValidation(validCid, validFilename, { value: validValue });
-      const receipt = await tx.wait();
-
-      const event = receipt.logs.find((l) => l.fragment && l.fragment.name === 'AnchoredNoValidation');
-      expect(event).to.not.be.undefined;
-      expect(event.args.submitter).to.equal(owner.address);
-      // Note: indexed string parameters are hashed in events
-      expect(event.args.timestamp).to.be.a('bigint');
-      expect(event.args.paid).to.equal(validValue);
-    });
-  });
-
   describe('anchorCidOnly() - CID only, no validation', function () {
     it('estimates gas cost for CID-only anchor', async function () {
       const [owner] = await ethers.getSigners();
@@ -228,18 +184,14 @@ describe('Gas Estimation for Anchor Functions', function () {
       const receipt1 = await tx1.wait();
       results.push({ name: 'anchor()', gas: receipt1.gasUsed });
 
-      const tx2 = await registry.anchorNoValidation(validCid, validFilename, { value: validValue });
+      const tx2 = await registry.anchorCidOnly(validCid, { value: validValue });
       const receipt2 = await tx2.wait();
-      results.push({ name: 'anchorNoValidation()', gas: receipt2.gasUsed });
-
-      const tx3 = await registry.anchorCidOnly(validCid, { value: validValue });
-      const receipt3 = await tx3.wait();
-      results.push({ name: 'anchorCidOnly()', gas: receipt3.gasUsed });
+      results.push({ name: 'anchorCidOnly()', gas: receipt2.gasUsed });
 
       const hash = ethers.keccak256(ethers.toUtf8Bytes('test'));
-      const tx4 = await registry.anchorBytes32(hash, { value: validValue });
-      const receipt4 = await tx4.wait();
-      results.push({ name: 'anchorBytes32()', gas: receipt4.gasUsed });
+      const tx3 = await registry.anchorBytes32(hash, { value: validValue });
+      const receipt3 = await tx3.wait();
+      results.push({ name: 'anchorBytes32()', gas: receipt3.gasUsed });
 
       console.log('\n      === Gas Comparison ===');
       results.forEach(r => console.log(`      ${r.name.padEnd(25)} ${r.gas.toString().padStart(8)} gas`));
@@ -254,7 +206,6 @@ describe('Gas Estimation for Anchor Functions', function () {
       });
 
       // Verify bytes32 is most efficient
-      expect(Number(results[3].gas)).to.be.lessThan(Number(results[2].gas));
       expect(Number(results[2].gas)).to.be.lessThan(Number(results[1].gas));
       expect(Number(results[1].gas)).to.be.lessThan(Number(results[0].gas));
     });
@@ -272,9 +223,6 @@ describe('Gas Estimation for Anchor Functions', function () {
       // All functions should enforce fee range
       await expect(registry.anchor(validCid, validFilename, { value: tooLow })).to.be.revertedWith('fee not met');
       await expect(registry.anchor(validCid, validFilename, { value: tooHigh })).to.be.revertedWith('fee not met');
-
-      await expect(registry.anchorNoValidation(validCid, validFilename, { value: tooLow })).to.be.revertedWith('fee not met');
-      await expect(registry.anchorNoValidation(validCid, validFilename, { value: tooHigh })).to.be.revertedWith('fee not met');
 
       await expect(registry.anchorCidOnly(validCid, { value: tooLow })).to.be.revertedWith('fee not met');
       await expect(registry.anchorCidOnly(validCid, { value: tooHigh })).to.be.revertedWith('fee not met');
