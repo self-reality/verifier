@@ -72,7 +72,6 @@ async function main() {
   } catch (e) {
     // file may not exist or be empty
   }
-  const owner = (await registry.owner()) || '';
   data[networkName] = {
     address,
     chainId: Number(net.chainId),
@@ -80,7 +79,7 @@ async function main() {
     config: {
       minFee,
       maxFee,
-      owner: owner
+      owner: deployer.address
     }
   };
   fs.writeFileSync(constantsPath, JSON.stringify(data, null, 2));
