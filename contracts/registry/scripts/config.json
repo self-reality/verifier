@@ -1,8 +1,14 @@
 {
+  "basesepolia": {
+    "config": {
+      "minFee": "0",
+      "maxFee": "0"
+    }
+  },
   "base": {
     "config": {
-      "minFee": "2500000000000",
-      "maxFee": "1300000000000000"
+      "minFee": "0",
+      "maxFee": "0"
     }
   },
   "polygon": {

@@ -38,16 +38,105 @@ pnpm hardhat node
 ```
 
 Deploy
-1) Configure environment variables for the target network:
+
+## Prerequisites
+1. Install dependencies:
+```bash
+cd contracts/registry
+pnpm install
 ```
-export RPC_URL="https://your.rpc"
-export PRIVATE_KEY="0x..."
+
+2. Set up your environment configuration:
+```bash
+cp .env.template .env
 ```
-2) Run deploy:
+
+3. Edit `.env` and add your credentials. You have two options:
+
+**Option A: Private Key (Recommended)**
+```bash
+DEPLOYER_KEY=0xyourprivatekeyhere
+BASE_SEPOLIA_RPC=https://sepolia.base.org
 ```
-pnpm hardhat run scripts/deploy.js --network <networkName>
+
+**Option B: Mnemonic File**
+```bash
+MNEMONIC_FILE_PATH=/path/to/your/mnemonic.js
+BASE_SEPOLIA_RPC=https://sepolia.base.org
 ```
-3) The script will update `registry/constants.json` with the deployed address.
+
+The mnemonic file should be a `.js` file with the following structure:
+```javascript
+module.exports = { 
+  mnemonic: "your twelve or twenty-four word mnemonic phrase here"
+}
+```
+
+The deployment will use the first address (index 0) derived from the mnemonic.
+
+4. Ensure your deployer address has sufficient funds on the target network.
+
+## Deploy to a Network
+
+### Testnet Deploy (Base Sepolia)
+```bash
+pnpm hardhat run scripts/deploy.js --network baseSepolia
+```
+
+### Mainnet Deploy
+```bash
+# Base Mainnet
+pnpm hardhat run scripts/deploy.js --network base
+
+# Polygon
+pnpm hardhat run scripts/deploy.js --network polygon
+
+# Arbitrum
+pnpm hardhat run scripts/deploy.js --network arbitrum
+
+# Optimism
+pnpm hardhat run scripts/deploy.js --network optimism
+
+# Ethereum Mainnet
+pnpm hardhat run scripts/deploy.js --network mainnet
+```
+
+The deployment script will:
+- Verify your deployer address has funds
+- Read fee configuration from `scripts/config.json`
+- Deploy the VerifierRegistry contract
+- Update `registry/constants.json` with the deployed address and configuration
+
+## Network Configuration
+
+Before deploying to a network, ensure it's configured in `scripts/config.json`. The file should contain fee settings for each network:
+
+```json
+{
+  "base": {
+    "config": {
+      "minFee": "0",
+      "maxFee": "0"
+    }
+  },
+  "polygon": {
+    "config": {
+      "minFee": "2500000000000",
+      "maxFee": "1300000000000000"
+    }
+  }
+}
+```
+
+Network names should match the network names in `hardhat.config.js` (lowercase).
+
+## After Deployment
+
+After deployment completes:
+1. The deployed contract address will be printed to the console
+2. `constants.json` will be updated with deployment details
+3. Share the `constants.json` file with your frontend and worker services
+4. Consider verifying the contract on the block explorer (e.g., Basescan, Etherscan)
 
 Notes
 - Use `constants.json` as the single source of truth for frontends and workers.

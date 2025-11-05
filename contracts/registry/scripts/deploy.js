@@ -1,10 +1,38 @@
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config();
 
 async function main() {
-  const [deployer] = await ethers.getSigners();
+  // Get deployer from environment
+  let deployer;
+  
+  // Option 1: Use private key (recommended)
+  if (process.env.DEPLOYER_KEY) {
+    [deployer] = await ethers.getSigners();
+  }
+  // Option 2: Use mnemonic file
+  else if (process.env.MNEMONIC_FILE_PATH) {
+    const mnemonicModule = require(path.resolve(process.env.MNEMONIC_FILE_PATH));
+    const mnemonic = mnemonicModule.mnemonic;
+    const wallet = ethers.Wallet.fromPhrase(mnemonic);
+    deployer = wallet.connect(ethers.provider);
+  } else {
+    throw new Error('No deployer credentials found. Set DEPLOYER_KEY or MNEMONIC_FILE_PATH in .env file');
+  }
+
   const net = await ethers.provider.getNetwork();
   const networkName = network.name; // hardhat runtime global `network`
+
+  console.log('Deploying from address:', deployer.address);
+  console.log('Network:', networkName, `(chainId ${net.chainId})`);
+
+  // Check deployer balance
+  const balance = await ethers.provider.getBalance(deployer.address);
+  console.log('Deployer balance:', ethers.formatEther(balance), 'ETH');
+
+  if (balance === 0n) {
+    throw new Error('Deployer account has no funds. Please fund the account before deploying.');
+  }
 
   // Load per-network fees from scripts/config.json
   const configPath = path.resolve(__dirname, 'config.json');
@@ -26,12 +54,14 @@ async function main() {
   const minFee = feesConfig.minFee;
   const maxFee = feesConfig.maxFee;
 
-  const VerifierRegistry = await ethers.getContractFactory('VerifierRegistry');
+  console.log('Deploying VerifierRegistry with minFee:', minFee, 'maxFee:', maxFee);
+
+  const VerifierRegistry = await ethers.getContractFactory('VerifierRegistry', deployer);
   const registry = await VerifierRegistry.deploy(deployer.address, BigInt(minFee), BigInt(maxFee));
   await registry.waitForDeployment();
   const address = await registry.getAddress();
 
-  console.log('VerifierRegistry deployed:', address, `on ${networkName} (chainId ${net.chainId})`);
+  console.log('✅ VerifierRegistry deployed:', address, `on ${networkName} (chainId ${net.chainId})`);
 
   // Write to constants.json with config
   const constantsPath = path.resolve(__dirname, '..', 'constants.json');
@@ -54,6 +84,7 @@ async function main() {
     }
   };
   fs.writeFileSync(constantsPath, JSON.stringify(data, null, 2));
+  console.log('✅ Updated constants.json');
 
 }
 
