@@ -14,8 +14,8 @@ describe('Gas Estimation for Anchor Functions', function () {
   const validFilename = 'document.pdf';
   const validValue = ethers.parseEther('0.001');
 
-  describe('anchor() - with full validation', function () {
-    it('estimates gas cost for anchor with validation', async function () {
+  describe('anchor() - no validation', function () {
+    it('estimates gas cost for anchor without validation', async function () {
       const [owner] = await ethers.getSigners();
       const registry = await deploy(owner.address);
 
@@ -23,7 +23,7 @@ describe('Gas Estimation for Anchor Functions', function () {
       const receipt = await tx.wait();
 
       console.log('      anchor() gas used:', receipt.gasUsed.toString());
-      expect(Number(receipt.gasUsed)).to.be.lessThan(150000);
+      expect(Number(receipt.gasUsed)).to.be.lessThan(100000);
     });
 
     it('verifies event emission', async function () {
