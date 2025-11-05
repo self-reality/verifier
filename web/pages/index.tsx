@@ -1,41 +1,104 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { verifierRegistryContract } from '../constants/contracts';
 
 export default function Home() {
+  // Wagmi hooks
+  const { address: walletAddress, isConnected: walletConnected } = useAccount();
+  const { connectors, connect } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { data: txHash, writeContract, error: writeError, isPending: isTxPending } = useWriteContract();
+  const { isLoading: isTxConfirming, isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+  // File and UI state
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hashProgress, setHashProgress] = useState(0);
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
   const [filename, setFilename] = useState('');
   const [editedFilename, setEditedFilename] = useState('');
   const [showEditOverlay, setShowEditOverlay] = useState(false);
-  const [transactionStatus, setTransactionStatus] = useState<'idle' | 'sent' | 'minted'>('idle');
-  const [transactionHash, setTransactionHash] = useState('');
   const [currentTime, setCurrentTime] = useState(0);
   const [mockCID, setMockCID] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [downloadClicked, setDownloadClicked] = useState(false);
   const [showResetConfirmOverlay, setShowResetConfirmOverlay] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
+  const [showConnectorSelection, setShowConnectorSelection] = useState(false);
+  const [filenameEditWarning, setFilenameEditWarning] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
   // Message states for each section
-  const [uploadMessage, setUploadMessage] = useState('[ WARNING !!! ]: File size exceeds recommended limit of 10MB\n[ WARNING !!! ]: File size exceeds recommended limit of 10MB');
-  const [verifyMessage, setVerifyMessage] = useState('[ ERROR !!! ]: Insufficient funds for transaction fee');
+  const [uploadMessage, setUploadMessage] = useState('');
+  const [verifyMessage, setVerifyMessage] = useState('');
   const [downloadMessage, setDownloadMessage] = useState('[ INFO ]: PDF generation may take up to 30 seconds');
 
   // Derived states from progress values
   const isUploading = uploadProgress > 0 && uploadProgress < 100;
   const isHashing = uploadProgress === 100 && hashProgress > 0 && hashProgress < 100;
   const isUploaded = hashProgress === 100;
+  
+  // Compute transaction status from wagmi state
+  const transactionStatus: 'idle' | 'sent' | 'minted' = 
+    isTxConfirmed ? 'minted' : 
+    (isTxPending || isTxConfirming) ? 'sent' : 
+    'idle';
+  
+  const transactionHash = txHash || '';
 
-  // These style objects are no longer needed - using CSS classes instead
+  // Filename validation utility
+  const validateFilename = (name: string): { isValid: boolean; sanitized: string; warnings: string[] } => {
+    const warnings: string[] = [];
+    let sanitized = name;
+    
+    // Convert to lowercase
+    if (sanitized !== sanitized.toLowerCase()) {
+      sanitized = sanitized.toLowerCase();
+      warnings.push('Uppercase letters converted to lowercase');
+    }
+    
+    // Replace invalid characters with empty string
+    const originalLength = sanitized.length;
+    sanitized = sanitized.replace(/[^a-z0-9\-_.]/g, '');
+    if (sanitized.length < originalLength) {
+      warnings.push('Invalid characters removed');
+    }
+    
+    // Remove leading/trailing dashes and dots
+    const beforeTrim = sanitized;
+    sanitized = sanitized.replace(/^[\-\.]+|[\-\.]+$/g, '');
+    if (sanitized !== beforeTrim) {
+      warnings.push('Leading/trailing dashes and dots removed');
+    }
+    
+    // Check length
+    if (sanitized.length === 0) {
+      return { isValid: false, sanitized: '', warnings: ['Filename cannot be empty'] };
+    }
+    if (sanitized.length > 128) {
+      sanitized = sanitized.substring(0, 128);
+      warnings.push('Filename truncated to 128 characters');
+    }
+    
+    return { isValid: true, sanitized, warnings };
+  };
+
+  // Generate CIDv1 format (bafy... with base32 characters)
+  const generateCIDv1 = () => {
+    const base32Chars = 'abcdefghijklmnopqrstuvwxyz234567';
+    let cid = 'bafy';
+    for (let i = 0; i < 55; i++) {
+      cid += base32Chars[Math.floor(Math.random() * base32Chars.length)];
+    }
+    return cid;
+  };
 
   useEffect(() => {
-    // Generate CID and set initial time only on client side to avoid hydration mismatch
-    setMockCID('Qm' + Math.random().toString(36).substr(2, 43));
+    // Generate CIDv1 and set initial time only on client side to avoid hydration mismatch
+    setMockCID(generateCIDv1());
     setCurrentTime(Date.now());
     
     const timer = setInterval(() => {
@@ -74,17 +137,52 @@ export default function Home() {
     }
   }, [pdfProgress]);
 
+  // Watch for transaction confirmation and start PDF generation
   useEffect(() => {
-    // Start PDF generation automatically when transaction is minted
-    if (transactionStatus === 'minted' && pdfProgress === 0) {
+    if (isTxConfirmed && pdfProgress === 0) {
       setPdfProgress(1);
     }
-  }, [transactionStatus, pdfProgress]);
+  }, [isTxConfirmed, pdfProgress]);
+
+  // Handle write errors
+  useEffect(() => {
+    if (writeError) {
+      const errorMessage = writeError.message || 'Transaction failed';
+      if (errorMessage.includes('insufficient funds')) {
+        setVerifyMessage('[ ERROR !!! ]: Insufficient funds for transaction fee');
+      } else if (errorMessage.includes('User rejected') || errorMessage.includes('User denied')) {
+        setVerifyMessage('[ ERROR !!! ]: Transaction rejected by user');
+      } else if (errorMessage.includes('filename')) {
+        setVerifyMessage('[ ERROR !!! ]: ' + errorMessage);
+      } else if (errorMessage.includes('cidv1')) {
+        setVerifyMessage('[ ERROR !!! ]: Invalid CID format');
+      } else {
+        setVerifyMessage('[ ERROR !!! ]: ' + errorMessage.split('\n')[0]);
+      }
+    }
+  }, [writeError]);
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
-    setFilename(selectedFile.name);
-    setEditedFilename(selectedFile.name);
+    const originalName = selectedFile.name;
+    const validation = validateFilename(originalName);
+    
+    if (validation.isValid) {
+      setFilename(validation.sanitized);
+      setEditedFilename(validation.sanitized);
+      
+      if (validation.warnings.length > 0) {
+        setUploadMessage('[ WARNING ]: ' + validation.warnings.join(', '));
+      } else {
+        setUploadMessage('');
+      }
+    } else {
+      setFilename('');
+      setEditedFilename('');
+      setUploadMessage('[ ERROR !!! ]: ' + validation.warnings.join(', '));
+      return;
+    }
+    
     setHashProgress(0);
     setUploadProgress(1); // Kick off upload progress
   };
@@ -130,12 +228,11 @@ export default function Home() {
     setEditedFilename('');
     setUploadProgress(0);
     setHashProgress(0);
-    setTransactionStatus('idle');
-    setTransactionHash('');
     setTermsAccepted(false);
     setDownloadClicked(false);
     setPdfProgress(0);
     setShowResetConfirmOverlay(false);
+    setVerifyMessage('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -144,23 +241,40 @@ export default function Home() {
   };
 
   const handleConnectWallet = () => {
-    setWalletConnected(true);
-    setWalletAddress('0x' + Math.random().toString(16).substr(2, 40));
+    // Show connector selection or connect with first available connector
+    if (connectors.length > 0) {
+      setShowConnectorSelection(true);
+    }
   };
 
   const handleDisconnectWallet = () => {
-    setWalletConnected(false);
-    setWalletAddress('');
-    setTransactionStatus('idle');
-    setTransactionHash('');
+    disconnect();
+    setVerifyMessage('');
   };
 
   const handleVerifyOnChain = () => {
-    setTransactionStatus('sent');
-    setTimeout(() => {
-      setTransactionStatus('minted');
-      setTransactionHash('0x' + Math.random().toString(16).substr(2, 64));
-    }, 2000);
+    // Clear previous errors
+    setVerifyMessage('');
+    
+    // Validate filename one more time before sending
+    const validation = validateFilename(editedFilename || filename);
+    if (!validation.isValid) {
+      setVerifyMessage('[ ERROR !!! ]: Invalid filename: ' + validation.warnings.join(', '));
+      return;
+    }
+    
+    // Call the contract
+    try {
+      writeContract({
+        address: verifierRegistryContract.address,
+        abi: verifierRegistryContract.abi,
+        functionName: 'anchor',
+        args: [mockCID, validation.sanitized],
+        value: BigInt(0), // Hardcoded fee of 0 for now
+      } as any);
+    } catch (error: any) {
+      setVerifyMessage('[ ERROR !!! ]: ' + (error.message || 'Failed to send transaction'));
+    }
   };
 
   const formatUnixTime = (timestamp: number) => {
@@ -526,13 +640,33 @@ export default function Home() {
               <input
                 type="text"
                 value={editedFilename}
-                onChange={(e) => setEditedFilename(e.target.value)}
+                onChange={(e) => {
+                  const input = e.target.value;
+                  const validation = validateFilename(input);
+                  setEditedFilename(validation.sanitized);
+                  if (validation.warnings.length > 0) {
+                    setFilenameEditWarning(validation.warnings.join(', '));
+                  } else {
+                    setFilenameEditWarning('');
+                  }
+                }}
                 className="input-text"
+                style={{ marginBottom: '10px' }}
               />
+              {filenameEditWarning && (
+                <div className="text-xs" style={{ 
+                  marginBottom: '15px',
+                  color: 'var(--color-accent)',
+                  opacity: 0.7
+                }}>
+                  {filenameEditWarning}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   onClick={() => {
                     setEditedFilename(filename);
+                    setFilenameEditWarning('');
                     setShowEditOverlay(false);
                   }}
                   className="btn btn-large"
@@ -541,11 +675,45 @@ export default function Home() {
                   CANCEL
                 </button>
                 <button
-                  onClick={() => setShowEditOverlay(false)}
+                  onClick={() => {
+                    setFilenameEditWarning('');
+                    setShowEditOverlay(false);
+                  }}
                   className="btn btn-large"
                   style={{ flex: 1 }}
                 >
                   SAVE
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Connector Selection Overlay */}
+        {showConnectorSelection && (
+          <div className="overlay">
+            <div className="overlay-content">
+              <h3 className="subsection-title">
+                SELECT WALLET
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {connectors.map((connector) => (
+                  <button
+                    key={connector.id}
+                    onClick={() => {
+                      connect({ connector });
+                      setShowConnectorSelection(false);
+                    }}
+                    className="btn btn-large"
+                  >
+                    {connector.name}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setShowConnectorSelection(false)}
+                  className="btn btn-large"
+                >
+                  CANCEL
                 </button>
               </div>
             </div>
