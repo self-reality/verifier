@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { verifierRegistryContract } from '../constants/contracts';
-import { getCurrencyTicker, roundDownWei, fetchPriceFeed, validateFilename, generateCIDv1, formatUnixTime, formatHumanTime, renderProgressBar } from '../utils';
+import { getCurrencyTicker, roundDownWei, fetchPriceFeed, validateFilename, computeSHA256, formatUnixTime, formatHumanTime, renderProgressBar } from '../utils';
 
 // Fee configuration (in cents, e.g., 100 = $1.00, 1 = $0.01)
 const FEE_CENTS = 1;
@@ -31,7 +31,7 @@ export default function Home() {
   const [editedFilename, setEditedFilename] = useState('');
   const [showEditOverlay, setShowEditOverlay] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [mockCID, setMockCID] = useState('');
+  const [fileHash, setFileHash] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [downloadClicked, setDownloadClicked] = useState(false);
   const [showResetConfirmOverlay, setShowResetConfirmOverlay] = useState(false);
@@ -63,9 +63,8 @@ export default function Home() {
   const transactionHash = txHash || '';
 
   useEffect(() => {
-    // Generate CIDv1 and set initial time only on client side to avoid hydration mismatch
+    // Set initial time only on client side to avoid hydration mismatch
     setMounted(true);
-    setMockCID(generateCIDv1());
     setCurrentTime(Date.now());
     
     const timer = setInterval(() => {
@@ -74,26 +73,6 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (uploadProgress > 0 && uploadProgress < 100) {
-      const timer = setTimeout(() => {
-        setUploadProgress(prev => Math.min(prev + 5, 100));
-      }, 30);
-      return () => clearTimeout(timer);
-    } else if (uploadProgress === 100 && hashProgress === 0) {
-      // Automatically start hashing when upload completes
-      setHashProgress(1);
-    }
-  }, [uploadProgress, hashProgress]);
-
-  useEffect(() => {
-    if (hashProgress > 0 && hashProgress < 100) {
-      const timer = setTimeout(() => {
-        setHashProgress(prev => Math.min(prev + 5, 100));
-      }, 30);
-      return () => clearTimeout(timer);
-    }
-  }, [hashProgress]);
 
   useEffect(() => {
     if (pdfProgress > 0 && pdfProgress < 100) {
@@ -194,7 +173,7 @@ export default function Home() {
     }
   }, [txHash, isTxPending, isTxConfirming, isTxConfirmed]);
 
-  const handleFileSelect = (selectedFile: File) => {
+  const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
     const originalName = selectedFile.name;
     const validation = validateFilename(originalName);
@@ -215,8 +194,26 @@ export default function Home() {
       return;
     }
     
+    // Reset progress and hash
+    setUploadProgress(0);
     setHashProgress(0);
-    setUploadProgress(1); // Kick off upload progress
+    setFileHash('');
+    
+    // Start computing SHA-256 hash
+    try {
+      const hash = await computeSHA256(
+        selectedFile,
+        (progress) => setUploadProgress(progress),
+        (progress) => setHashProgress(progress)
+      );
+      setFileHash(hash);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to compute hash';
+      setUploadMessage('[ ERROR !!! ]: ' + errorMessage);
+      setUploadProgress(0);
+      setHashProgress(0);
+      setFileHash('');
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -244,6 +241,7 @@ export default function Home() {
     setEditedFilename('');
     setUploadProgress(0);
     setHashProgress(0);
+    setFileHash('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -260,6 +258,7 @@ export default function Home() {
     setEditedFilename('');
     setUploadProgress(0);
     setHashProgress(0);
+    setFileHash('');
     setTermsAccepted(false);
     setDownloadClicked(false);
     setPdfProgress(0);
@@ -312,7 +311,7 @@ export default function Home() {
         address: verifierRegistryContract.address,
         abi: verifierRegistryContract.abi,
         functionName: 'anchor',
-        args: [mockCID, validation.sanitized],
+        args: [fileHash, validation.sanitized],
         value: feeAmountWei,
       } as any);
     } catch (error: any) {
@@ -481,8 +480,8 @@ export default function Home() {
               </div>
 
               <div style={{ marginBottom: '10px' }}>
-                <span className="text-xs">CID: </span>
-                <span className="text-xs word-break-all">{mockCID}</span>
+                <span className="text-xs">SHA-256 HASH: </span>
+                <span className="text-xs word-break-all">{fileHash || '(computing...)'}</span>
               </div>
 
               <div style={{ marginBottom: '10px' }}>

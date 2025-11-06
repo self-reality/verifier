@@ -126,3 +126,99 @@ export const renderProgressBar = (progress: number) => {
   return '█'.repeat(filled) + '░'.repeat(blocks - filled);
 };
 
+// Compute SHA-256 hash of a file with progress tracking
+export async function computeSHA256(
+  file: File,
+  onReadProgress: (progress: number) => void,
+  onHashProgress: (progress: number) => void
+): Promise<string> {
+  const CHUNK_SIZE = 64 * 1024; // 64KB chunks
+  const fileSize = file.size;
+  let bytesProcessed = 0;
+
+  try {
+    // For modern browsers with streaming support
+    if (file.stream && crypto.subtle) {
+      const stream = file.stream();
+      const reader = stream.getReader();
+      const chunks: Uint8Array[] = [];
+
+      // Read all chunks
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        chunks.push(value);
+        bytesProcessed += value.length;
+        
+        // Report read progress
+        const readProgress = (bytesProcessed / fileSize) * 100;
+        onReadProgress(Math.min(readProgress, 100));
+      }
+
+      // All chunks read, now hash them
+      onReadProgress(100);
+      
+      // Concatenate all chunks into a single buffer
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const fileBuffer = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const chunk of chunks) {
+        fileBuffer.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      // Compute hash (happens relatively quickly for most files)
+      onHashProgress(50); // Indicate hashing is in progress
+      const hashBuffer = await crypto.subtle.digest('SHA-256', fileBuffer);
+      onHashProgress(100);
+
+      // Convert to lowercase hex string
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      return hashHex;
+    } else {
+      // Fallback for older browsers using FileReader
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const progress = (e.loaded / e.total) * 100;
+            onReadProgress(Math.min(progress, 100));
+          }
+        };
+        
+        reader.onload = async (e) => {
+          try {
+            onReadProgress(100);
+            onHashProgress(50);
+            
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+            
+            onHashProgress(100);
+            
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            
+            resolve(hashHex);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        
+        reader.onerror = () => {
+          reject(new Error('Failed to read file'));
+        };
+        
+        reader.readAsArrayBuffer(file);
+      });
+    }
+  } catch (error) {
+    throw new Error(`Failed to compute SHA-256: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
