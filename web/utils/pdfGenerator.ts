@@ -15,8 +15,9 @@ export interface CertificateData {
 
 export async function generateCertificatePDF(
   data: CertificateData,
-  onProgress?: (progress: number) => void
-): Promise<void> {
+  onProgress?: (progress: number) => void,
+  outputMode: 'download' | 'buffer' = 'download'
+): Promise<void | ArrayBuffer> {
   try {
     if (onProgress) onProgress(10);
 
@@ -234,11 +235,16 @@ export async function generateCertificatePDF(
 
     if (onProgress) onProgress(95);
 
-    // Save the PDF
+    // Save the PDF or return buffer based on output mode
     const filename = `proof-of-existence-${data.filename.replace(/[^a-z0-9\-_.]/g, '_')}.pdf`;
-    doc.save(filename);
 
-    if (onProgress) onProgress(100);
+    if (outputMode === 'buffer') {
+      if (onProgress) onProgress(100);
+      return doc.output('arraybuffer') as ArrayBuffer;
+    } else {
+      doc.save(filename);
+      if (onProgress) onProgress(100);
+    }
   } catch (error) {
     console.error('Error generating PDF:', error);
     throw new Error('Failed to generate PDF certificate');
