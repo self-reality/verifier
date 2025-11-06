@@ -445,7 +445,7 @@ export default function Home() {
 
               <div style={{ marginBottom: '10px' }}>
                 <span className="text-xs">YOUR WALLET ADDRESS: </span>
-                {walletConnected ? (
+                {mounted && walletConnected ? (
                   <span className="text-xs word-break-all">{walletAddress}</span>
                 ) : (
                   <span className="text-xs text-disabled">(CONNECT YOUR WALLET)</span>
@@ -475,12 +475,12 @@ export default function Home() {
 
               <div style={{ marginBottom: '10px' }}>
                 <span className="text-xs">TIMESTAMP: </span>
-                <span className="text-xs">{formatHumanTime(currentTime)} GMT</span>
+                <span className="text-xs">{mounted ? formatHumanTime(currentTime) : '00:00:00'} GMT</span>
               </div>
 
               <div>
                 <span className="text-xs">FEE: </span>
-                {walletConnected ? (
+                {mounted && walletConnected ? (
                   <span className="text-xs">0.001 ETH (APPROX $1)</span>
                 ) : (
                   <span className="text-xs text-disabled">(CONNECT YOUR WALLET)</span>
@@ -568,7 +568,7 @@ export default function Home() {
 
               <div style={{ marginBottom: '10px' }}>
                 <span className="text-xs">NETWORK NAME: </span>
-                {walletConnected ? (
+                {mounted && walletConnected ? (
                   <span className="text-xs">ETHEREUM MAINNET</span>
                 ) : (
                   <span className="text-xs text-disabled">(CONNECT YOUR WALLET)</span>
