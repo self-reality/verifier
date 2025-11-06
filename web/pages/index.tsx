@@ -3,15 +3,80 @@ import Head from 'next/head';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { verifierRegistryContract } from '../constants/contracts';
 
+// Price feed configuration
+const PRICE_FEED_URL = process.env.NEXT_PUBLIC_PRICE_FEED_URL || 'https://price-feed.porobov-p3798.workers.dev';
+
+// Map chainId to currency ticker
+function getCurrencyTicker(chainId: number | undefined): string | null {
+  if (!chainId) return null;
+  switch (chainId) {
+    case 1: // Ethereum Mainnet
+    case 8453: // Base
+      return 'ETH';
+    case 137: // Polygon
+      return 'POL';
+    case 10: // Optimism
+      return 'OP';
+    default:
+      return null;
+  }
+}
+
+// Round down bigint to significant figures for cleaner display and lower gas
+function roundDownWei(amountWei: bigint): bigint {
+  const str = amountWei.toString();
+  if (str.length <= 3) return amountWei;
+  
+  // Keep 2-3 significant figures, round down the rest
+  const sigFigs = 3;
+  const zeros = str.length - sigFigs;
+  let divisor = BigInt(1);
+  for (let i = 0; i < zeros; i++) {
+    divisor = divisor * BigInt(10);
+  }
+  return (amountWei / divisor) * divisor;
+}
+
+// Fetch price from worker
+async function fetchPriceFeed(chainId: number): Promise<{ amountWei: bigint; priceUsd: number; ticker: string }> {
+  const ticker = getCurrencyTicker(chainId);
+  if (!ticker) {
+    throw new Error('Unsupported chain');
+  }
+  
+  const url = `${PRICE_FEED_URL}/api/usd-to-amount?usd=1&chainId=${chainId}`;
+  const response = await fetch(url);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch price: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  const rawAmountWei = BigInt(data.amountWei);
+  const amountWei = roundDownWei(rawAmountWei);
+  
+  return {
+    amountWei,
+    priceUsd: data.priceUsd,
+    ticker
+  };
+}
+
 export default function Home() {
   // Wagmi hooks
-  const { address: walletAddress, isConnected: walletConnected } = useAccount();
+  const { address: walletAddress, isConnected: walletConnected, chainId } = useAccount();
   const { connectors, connect, error: connectError, reset: resetConnect } = useConnect();
   const { disconnect } = useDisconnect();
   const { data: txHash, writeContract, error: writeError, isPending: isTxPending } = useWriteContract();
   const { isLoading: isTxConfirming, isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
   });
+
+  // Fee state
+  const [feeAmountWei, setFeeAmountWei] = useState<bigint | null>(null);
+  const [feeCurrencyTicker, setFeeCurrencyTicker] = useState<string>('ETH');
+  const [feeLoading, setFeeLoading] = useState(false);
+  const [feeError, setFeeError] = useState<string>('');
 
   // File and UI state
   const [file, setFile] = useState<File | null>(null);
@@ -140,6 +205,35 @@ export default function Home() {
       return () => clearTimeout(timer);
     }
   }, [pdfProgress]);
+
+  // Fetch price when wallet connects or chain changes
+  useEffect(() => {
+    if (!walletConnected || !chainId) {
+      setFeeAmountWei(null);
+      setFeeCurrencyTicker('ETH');
+      setFeeLoading(false);
+      setFeeError('');
+      return;
+    }
+
+    const fetchPrice = async () => {
+      setFeeLoading(true);
+      setFeeError('');
+      try {
+        const result = await fetchPriceFeed(chainId);
+        setFeeAmountWei(result.amountWei);
+        setFeeCurrencyTicker(result.ticker);
+      } catch (error) {
+        console.error('Failed to fetch price:', error);
+        setFeeError('Failed to fetch fee');
+        setFeeAmountWei(null);
+      } finally {
+        setFeeLoading(false);
+      }
+    };
+
+    fetchPrice();
+  }, [walletConnected, chainId]);
 
   // Watch for transaction confirmation and start PDF generation
   useEffect(() => {
@@ -308,6 +402,12 @@ export default function Home() {
       return;
     }
     
+    // Validate fee is loaded
+    if (!feeAmountWei) {
+      setVerifyMessage('[ ERROR !!! ]: Fee not loaded yet. Please wait or refresh.');
+      return;
+    }
+    
     // Call the contract
     try {
       writeContract({
@@ -315,7 +415,7 @@ export default function Home() {
         abi: verifierRegistryContract.abi,
         functionName: 'anchor',
         args: [mockCID, validation.sanitized],
-        value: BigInt(0), // Hardcoded fee of 0 for now
+        value: feeAmountWei,
       } as any);
     } catch (error: any) {
       setVerifyMessage('[ ERROR !!! ]: ' + (error.message || 'Failed to send transaction'));
@@ -513,7 +613,17 @@ export default function Home() {
               <div>
                 <span className="text-xs">FEE: </span>
                 {mounted && walletConnected ? (
-                  <span className="text-xs">0.001 ETH (APPROX $1)</span>
+                  feeError ? (
+                    <span className="text-xs" style={{ color: 'var(--color-accent)' }}>ERROR FETCHING FEE</span>
+                  ) : feeLoading ? (
+                    <span className="text-xs" style={{ opacity: 0.6 }}>LOADING...</span>
+                  ) : feeAmountWei ? (
+                    <span className="text-xs">
+                      {(Number(feeAmountWei) / 1e18).toFixed(6)} {feeCurrencyTicker} ($1)
+                    </span>
+                  ) : (
+                    <span className="text-xs text-disabled">LOADING...</span>
+                  )
                 ) : (
                   <span className="text-xs text-disabled">(CONNECT YOUR WALLET)</span>
                 )}
@@ -571,8 +681,8 @@ export default function Home() {
 
               <button
                 onClick={handleVerifyOnChain}
-                disabled={!isUploaded || !walletConnected || !termsAccepted || transactionStatus === 'minted'}
-                className={`btn btn-large btn-full-width ${isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' ? '' : 'btn-disabled'}`}
+                disabled={!isUploaded || !walletConnected || !termsAccepted || transactionStatus === 'minted' || !feeAmountWei || feeLoading}
+                className={`btn btn-large btn-full-width ${isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' && feeAmountWei && !feeLoading ? '' : 'btn-disabled'}`}
               >
                 VERIFY ON CHAIN
               </button>
