@@ -118,7 +118,7 @@ export default function Home() {
       setFeeLoading(true);
       setFeeError('');
       try {
-        const result = await fetchPriceFeed(chainId, FEE_CENTS / 100);
+        const result = await fetchPriceFeed(chainId, FEE_CENTS);
         setFeeAmountWei(result.amountWei);
         setFeeCurrencyTicker(result.ticker);
       } catch (error) {

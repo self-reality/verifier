@@ -32,8 +32,8 @@ export function roundDownWei(amountWei: bigint): bigint {
   return (amountWei / divisor) * divisor;
 }
 
-// Fetch price from worker (always fetches rate for $1, then multiplies by feeUsd)
-export async function fetchPriceFeed(chainId: number, feeUsd: number): Promise<{ amountWei: bigint; priceUsd: number; ticker: string }> {
+// Fetch price from worker (always fetches rate for $1, then multiplies by feeCents)
+export async function fetchPriceFeed(chainId: number, feeCents: number): Promise<{ amountWei: bigint; priceUsd: number; ticker: string }> {
   const ticker = getCurrencyTicker(chainId);
   if (!ticker) {
     throw new Error('Unsupported chain');
@@ -48,8 +48,10 @@ export async function fetchPriceFeed(chainId: number, feeUsd: number): Promise<{
   }
   
   const data = await response.json();
-  // Multiply the $1 rate by the configured fee amount
-  const rawAmountWei = BigInt(data.amountWei) * BigInt(feeUsd);
+  // Multiply the $1 rate by the configured fee amount (in cents)
+  // Since feeCents is an integer, we can use it directly with BigInt
+  const amountWeiFor1Usd = BigInt(data.amountWei);
+  const rawAmountWei = (amountWeiFor1Usd * BigInt(feeCents)) / BigInt(100);
   const amountWei = roundDownWei(rawAmountWei);
   
   return {
