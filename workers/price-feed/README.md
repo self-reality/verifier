@@ -42,7 +42,7 @@ pnpm i # or npm i
 pnpm dev
 ```
 
-Example curl:
+Example curl (local):
 ```
 curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453"
 ```
@@ -55,6 +55,22 @@ curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453&provider=coinge
 Strict mode example (no fallback):
 ```
 curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453&provider=coingecko&strict=1"
+```
+
+Production examples:
+```
+# Health check
+curl "https://price-feed.porobov-p3798.workers.dev/health"
+
+# Get ETH amount for $1 on Base (chain 8453)
+curl "https://price-feed.porobov-p3798.workers.dev/api/usd-to-amount?usd=1&chainId=8453"
+
+# Use CoinGecko provider
+curl "https://price-feed.porobov-p3798.workers.dev/api/usd-to-amount?usd=1&chainId=8453&provider=coingecko"
+
+# Strict mode (no fallback)
+curl "https://price-feed.porobov-p3798.workers.dev/api/usd-to-amount?usd=1&chainId=8453&provider=coindesk&strict=1"
+
 ```
 
 Cycle-through test script:
