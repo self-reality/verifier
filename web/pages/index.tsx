@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { verifierRegistryContract } from '../constants/contracts';
+import { getCurrencyTicker, roundDownWei, fetchPriceFeed, validateFilename, generateCIDv1, formatUnixTime, formatHumanTime, renderProgressBar } from '../utils';
 
 // Fee configuration (in cents, e.g., 100 = $1.00, 1 = $0.01)
 const FEE_CENTS = 1;
