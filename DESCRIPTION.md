@@ -23,29 +23,28 @@ Ethereum
 - **Simplicity:** One‑click flow, ~$1 cost, instant certificate and report.
 
 ### User Journey (Happy Path)
-1. Open app and see tagline: “Verify any doc on blockchain for just $1. (Your file never leaves your computer).”
+1. Open app and see tagline: "Verify any doc on blockchain for just $1. (Your file never leaves your computer)."
 2. Upload/drag‑drop a file.
-3. Browser computes file hash and the IPFS CID (same as if uploaded to IPFS).
+3. Browser computes SHA-256 hash of the file with progress indication.
 4. User connects wallet (if not already connected).
 5. User edits display filename if desired (with length limit) in Certificate Preview. The app normalizes to a `slugFilename` on upload and during input (lowercase; allowed `a-z 0-9 - _ .`; disallowed chars → `-`; collapse multiple `-`; trim leading/trailing `-` and `.`; preserve last extension; `~` forbidden). The NFT `name` equals this `slugFilename`.
-6. User clicks “Verify”.
-7. Transaction is sent to a single contract address (consistent across supported networks).
+6. User clicks "Verify".
+7. Transaction is sent to a single contract address (consistent across supported networks), passing the SHA-256 hash.
 8. As soon as the transaction hash is available, generate the PDF report.
 9. After the transaction is mined, show success state and provide certificate + PDF download and explorer link.
 
 ### Flow & States
-- Upload area states: idle → loading to browser → hashing (progress %) → ready (filename shown; drag&drop and click remain available; “swap file”).
-- Certificate Preview: shows editable filename (length‑limited), file hash, IPFS CID.
+- Upload area states: idle → loading to browser → hashing (progress %) → ready (filename shown; drag&drop and click remain available; "swap file").
+- Certificate Preview: shows editable filename (length‑limited) and SHA-256 hash.
 - Wallet: prompt to connect if disconnected; show network and address when connected.
 - Transaction: pending (tx hash known) → mined/confirmed.
 - Completion: show report summary, explorer link, QR, and download button.
 
 ### Functional Requirements
-- Client‑side hashing of the entire file in a streaming/chunked manner with progress.
-- Client‑side IPFS CID computation matching official IPFS behavior for the given hash function and chunking parameters.
+- Client‑side SHA-256 hashing of the entire file in a streaming/chunked manner with progress.
 - Filename edit with enforced max length compatible with on-chain storage constraints. Input is normalized to `slugFilename` everywhere; the NFT `name` equals the (possibly edited) `slugFilename`.
-- Single NFT mint function on a contract address common across networks (chain routing handled internally).
-- Immediate PDF generation once tx hash is known; update status to “confirmed” once mined.
+- Single NFT anchor function on a contract address common across networks (passing SHA-256 hash as the `cidv1` parameter for forward compatibility).
+- Immediate PDF generation once tx hash is known; update status to "confirmed" once mined.
 - QR codes: one embedded in NFT image (instructions) and one in PDF (explorer link).
 
 ### NFT Certificate Specification
@@ -53,13 +52,12 @@ Ethereum
 - Token type: transferable; unique per verification. Token IDs are incremental (standard).
 - Metadata (on‑chain or via tokenURI):
   - Filename (editable, length‑limited)
-  - IPFS CID (user can self‑upload to IPFS; CID should match)
-  - File hash (exact algorithm and parameters documented below)
+  - SHA-256 file hash (FIPS 180-4, lowercase hex, 64 characters)
   - Image: contains a QR linking to the token `external_url`
   - Name: equal to the filename
   - `external_url`: `https://mysite.com/[slug]`
 - Image content guidelines:
-  - Prominent filename, IPFS CID, and file hash
+  - Prominent filename and SHA-256 hash
   - Clear QR with short URL to instructions
 
 
@@ -68,8 +66,7 @@ Ethereum
   - User wallet address
   - Network name
   - Filename
-  - File hash
-  - IPFS CID (note: user can self‑upload; CID should match)
+  - SHA-256 file hash
   - Transaction hash
   - Explorer link
   - QR code of the explorer link
@@ -77,17 +74,16 @@ Ethereum
 - Generated client‑side upon obtaining tx hash, updated with final status when mined.
 
 ### Verification Methods (for third parties)
-- Re‑upload the original file on this site to reproduce the same hash and CID; compare with on‑chain data.
-- Use any external hashing tool with the published algorithm and parameters; compare the resulting hash with the on‑chain value.
-- Upload the file to IPFS independently; confirm the CID matches the certificate.
+- Re‑upload the original file on this site to reproduce the same SHA-256 hash; compare with on‑chain data.
+- Use any external hashing tool (e.g., `shasum -a 256`, OpenSSL, online calculators) to compute the SHA-256 hash; compare the resulting hash with the on‑chain value.
 
 ### UI/UX Requirements
-- Top header: “Verify any doc on blockchain for just $1. (Your file never leaves your computer).”
-- Step indicator: “1. Upload → 2. Write on chain → 3. Get certificate.”
+- Top header: "Verify any doc on blockchain for just $1. (Your file never leaves your computer)."
+- Step indicator: "1. Upload → 2. Write on chain → 3. Get certificate."
 - Upload zone: large, drag‑and‑drop and click; shows progress and clear permissions text.
-- Post‑upload: compact file pill with name, “swap file”, and persistent drag‑and‑drop.
-- Certificate Preview: editable filename with length counter/limit; show computed hash and CID.
-- Actions: “Connect wallet” (if needed), “Verify” primary CTA.
+- Post‑upload: compact file pill with name, "swap file", and persistent drag‑and‑drop.
+- Certificate Preview: editable filename with length counter/limit; show computed SHA-256 hash.
+- Actions: "Connect wallet" (if needed), "Verify" primary CTA.
 - Confirmation: success message, explorer link, QR, and PDF download.
 - Accessibility: keyboard navigation, sufficient contrast, screen‑reader labels.
 
@@ -104,7 +100,6 @@ Ethereum
 - Legal validity depends on jurisdiction; display a clear disclaimer in the UI and PDF.
 
 ### Glossary
-- File hash: cryptographic digest of the file contents using a specified algorithm.
-- IPFS CID: content identifier derived from the file using IPFS rules; identical for the same content.
-- NFT certificate: on‑chain token encoding the file’s proof‑of‑existence metadata.
+- File hash: SHA-256 cryptographic digest of the file contents (FIPS 180-4), output as lowercase hexadecimal (64 characters).
+- NFT certificate: on‑chain token encoding the file's proof‑of‑existence metadata.
 - Explorer link: URL to a blockchain explorer page for the transaction or token.
