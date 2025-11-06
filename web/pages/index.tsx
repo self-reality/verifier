@@ -35,6 +35,9 @@ export default function Home() {
   const [uploadMessage, setUploadMessage] = useState('');
   const [verifyMessage, setVerifyMessage] = useState('');
   const [downloadMessage, setDownloadMessage] = useState('[ INFO ]: PDF generation may take up to 30 seconds');
+  
+  // Mounted state to prevent hydration mismatch
+  const [mounted, setMounted] = useState(false);
 
   // Derived states from progress values
   const isUploading = uploadProgress > 0 && uploadProgress < 100;
@@ -98,6 +101,7 @@ export default function Home() {
 
   useEffect(() => {
     // Generate CIDv1 and set initial time only on client side to avoid hydration mismatch
+    setMounted(true);
     setMockCID(generateCIDv1());
     setCurrentTime(Date.now());
     
@@ -161,6 +165,13 @@ export default function Home() {
       }
     }
   }, [writeError]);
+
+  // Show success message when transaction is sent
+  useEffect(() => {
+    if (txHash && (isTxPending || isTxConfirming) && !isTxConfirmed) {
+      setVerifyMessage(`[ SUCCESS ]: Transaction sent! View on Basescan: https://basescan.org/tx/${txHash}`);
+    }
+  }, [txHash, isTxPending, isTxConfirming, isTxConfirmed]);
 
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile);
@@ -232,7 +243,9 @@ export default function Home() {
     setDownloadClicked(false);
     setPdfProgress(0);
     setShowResetConfirmOverlay(false);
+    setUploadMessage('');
     setVerifyMessage('');
+    setDownloadMessage('[ INFO ]: PDF generation may take up to 30 seconds');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -318,7 +331,7 @@ export default function Home() {
               <span className="text-md">PROOF OF EXISTENCE</span>
             </div>
             <div>
-              {walletConnected ? (
+              {walletConnected && mounted ? (
                 <button
                   onClick={handleDisconnectWallet}
                   disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
@@ -482,7 +495,7 @@ export default function Home() {
               </h3>
 
               <div style={{ marginBottom: '15px' }}>
-                {walletConnected ? (
+                {walletConnected && mounted ? (
                   <button
                     onClick={handleDisconnectWallet}
                     disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
@@ -574,9 +587,19 @@ export default function Home() {
               <div style={{ marginBottom: '15px' }}>
                 <span className="text-xs">TRANSACTION URL: </span>
                 {transactionHash ? (
-                  <span className="text-xs word-break-all">
-                    HTTPS://ETHERSCAN.IO/TX/{transactionHash}
-                  </span>
+                  <a 
+                    href={`https://basescan.org/tx/${transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs word-break-all"
+                    style={{ 
+                      color: 'var(--color-accent)',
+                      textDecoration: 'underline',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    HTTPS://BASESCAN.ORG/TX/{transactionHash}
+                  </a>
                 ) : (
                   <span className="text-xs text-disabled">(SEND VERIFICATION TRANSACTION)</span>
                 )}
