@@ -23,6 +23,33 @@ Deploy contracts using:
 npx hardhat run scripts/deploy.js --network <network-name>
 ```
 
+## Managing Contract Parameters
+
+After deployment, you can update contract parameters (fees and owner) using the `manage.js` script:
+
+```bash
+npx hardhat run scripts/manage.js --network <network-name>
+```
+
+This script will:
+1. Read the desired configuration from `config.json` for the selected network
+2. Connect to the deployed contract and read current values
+3. Show a comparison of current vs desired values
+4. Ask for confirmation before making any changes
+5. Update fees and/or transfer ownership if confirmed
+6. Update `constants.json` with the new configuration
+
+**Example:**
+```bash
+# Update fees on Base mainnet
+npx hardhat run scripts/manage.js --network base
+
+# Update fees on Polygon
+npx hardhat run scripts/manage.js --network polygon
+```
+
+**Note:** Ensure you have `DEPLOYER_KEY` or `MNEMONIC_FILE_PATH` set in your `.env` file, and that the deployer account is the current owner of the contract.
+
 ## Verification
 
 After deployment, verify your contract on Etherscan/block explorers:
