@@ -51,8 +51,8 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
 
   // Derived states from progress values
-  const isUploading = uploadProgress > 0 && uploadProgress < 100;
-  const isHashing = uploadProgress === 100 && hashProgress > 0 && hashProgress < 100;
+  const isUploading = uploadProgress >= 0 && uploadProgress < 100;
+  const isHashing = uploadProgress === 100 && hashProgress >= 0 && hashProgress < 100;
   const isUploaded = hashProgress === 100;
   
   // Compute transaction status from wagmi state
@@ -181,9 +181,9 @@ export default function Home() {
       return;
     }
     
-    // Reset progress and hash
-    setUploadProgress(0);
-    setHashProgress(0);
+    // Initialize progress bars
+    setUploadProgress(1);
+    setHashProgress(1);
     setFileHash('');
     
     // Start computing SHA-256 hash
@@ -364,7 +364,7 @@ export default function Home() {
             1. UPLOAD
           </h2>
 
-          {!file && !isUploading && !isHashing && !isUploaded && (
+          {!file && (
             <div
               ref={dropZoneRef}
               onDrop={handleDrop}
@@ -387,7 +387,7 @@ export default function Home() {
             </div>
           )}
 
-          {(isUploading || isHashing || isUploaded) && file && (
+          {file && (
             <div className="pixel-box">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
                 <span className="text-sm">{editedFilename || filename}</span>
