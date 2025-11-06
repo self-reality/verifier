@@ -10,9 +10,8 @@ contract VerifierRegistry is Ownable {
         maxFee = _maxFee;
     }
 
-    event Anchored(address indexed submitter, string indexed cid, string indexed filename, uint256 timestamp, uint256 paid);
-    event AnchoredCidOnly(address indexed submitter, string indexed cid, uint256 timestamp, uint256 paid);
-    event AnchoredBytes32(address indexed submitter, bytes32 indexed hash, uint256 timestamp, uint256 paid);
+    event Anchored(string indexed cidIndex, string cid, string filename, address submitter,  uint256 timestamp, uint256 paid);
+    event AnchoredBytes32(bytes32 indexed hashIndex, bytes32 hash, address submitter, uint256 timestamp, uint256 paid);
 
     uint256 public minFee;
     uint256 public maxFee;
@@ -30,19 +29,19 @@ contract VerifierRegistry is Ownable {
 
     function anchor(string calldata cid, string calldata filename) external payable {
         require(msg.value >= minFee && msg.value <= maxFee, "fee not met");
-        emit Anchored(msg.sender, cid, filename, block.timestamp, msg.value);
+        emit Anchored(cid, cid, filename, msg.sender, block.timestamp, msg.value);
     }
 
     // Version with only CID (no filename, no validation)
     function anchorCidOnly(string calldata cid) external payable {
         require(msg.value >= minFee && msg.value <= maxFee, "fee not met");
-        emit AnchoredCidOnly(msg.sender, cid, block.timestamp, msg.value);
+        emit Anchored(cid, cid, "", msg.sender, block.timestamp, msg.value);
     }
 
     // Version with bytes32 hash (no filename, no validation, optimized storage)
     function anchorBytes32(bytes32 hash) external payable {
         require(msg.value >= minFee && msg.value <= maxFee, "fee not met");
-        emit AnchoredBytes32(msg.sender, hash, block.timestamp, msg.value);
+        emit AnchoredBytes32(hash, hash, msg.sender, block.timestamp, msg.value);
     }
 }
 
