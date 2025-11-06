@@ -6,7 +6,7 @@ import { verifierRegistryContract } from '../constants/contracts';
 export default function Home() {
   // Wagmi hooks
   const { address: walletAddress, isConnected: walletConnected } = useAccount();
-  const { connectors, connect } = useConnect();
+  const { connectors, connect, error: connectError, reset: resetConnect } = useConnect();
   const { disconnect } = useDisconnect();
   const { data: txHash, writeContract, error: writeError, isPending: isTxPending } = useWriteContract();
   const { isLoading: isTxConfirming, isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
@@ -148,6 +148,35 @@ export default function Home() {
     }
   }, [isTxConfirmed, pdfProgress]);
 
+  // Handle connection errors
+  useEffect(() => {
+    if (connectError) {
+      // Close the connector selection overlay
+      setShowConnectorSelection(false);
+      
+      const errorMessage = connectError.message || 'Connection failed';
+      if (errorMessage.includes('Proposal expired')) {
+        setVerifyMessage('[ ERROR !!! ]: WalletConnect proposal expired. Please try again.');
+        // Reset the connection state to allow retry
+        setTimeout(() => {
+          resetConnect();
+          setVerifyMessage('');
+        }, 3000);
+      } else if (errorMessage.includes('User rejected')) {
+        setVerifyMessage('[ ERROR !!! ]: Connection rejected by user');
+        setTimeout(() => {
+          resetConnect();
+          setVerifyMessage('');
+        }, 2000);
+      } else {
+        setVerifyMessage('[ ERROR !!! ]: ' + errorMessage.split('\n')[0]);
+        setTimeout(() => {
+          resetConnect();
+        }, 3000);
+      }
+    }
+  }, [connectError, resetConnect]);
+
   // Handle write errors
   useEffect(() => {
     if (writeError) {
@@ -254,6 +283,9 @@ export default function Home() {
   };
 
   const handleConnectWallet = () => {
+    // Clear any previous connection errors
+    resetConnect();
+    setVerifyMessage('');
     // Show connector selection or connect with first available connector
     if (connectors.length > 0) {
       setShowConnectorSelection(true);
@@ -724,6 +756,7 @@ export default function Home() {
                   <button
                     key={connector.id}
                     onClick={() => {
+                      resetConnect(); // Clear any previous errors
                       connect({ connector });
                       setShowConnectorSelection(false);
                     }}
@@ -733,7 +766,10 @@ export default function Home() {
                   </button>
                 ))}
                 <button
-                  onClick={() => setShowConnectorSelection(false)}
+                  onClick={() => {
+                    setShowConnectorSelection(false);
+                    resetConnect();
+                  }}
                   className="btn btn-large"
                 >
                   CANCEL
