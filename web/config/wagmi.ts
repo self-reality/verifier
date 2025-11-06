@@ -9,24 +9,42 @@ const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_KEY || '';
 // WalletConnect project ID (you'll need to get this from cloud.walletconnect.com)
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '';
 
-export const config = createConfig({
-  chains: [base],
-  connectors: [
-    injected(),
+// Warn if WalletConnect project ID is missing
+if (typeof window !== 'undefined' && !projectId) {
+  console.warn(
+    '⚠️ WalletConnect Project ID is missing!\n' +
+    'Get one from https://cloud.walletconnect.com and add it to .env.local:\n' +
+    'NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id'
+  );
+}
+
+// Build connectors array conditionally
+const connectors = [
+  injected(),
+  coinbaseWallet({
+    appName: 'Proof of Existence',
+  }),
+];
+
+// Only add WalletConnect if we have a project ID
+if (projectId) {
+  connectors.push(
     walletConnect({
       projectId,
       metadata: {
         name: 'Proof of Existence',
         description: 'Verify any document on blockchain',
-        url: 'https://your-domain.com', // Update with your actual domain
-        icons: ['https://your-domain.com/icon.png']
+        url: typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000',
+        icons: [`${typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000'}/icon.png`]
       },
       showQrModal: true,
-    }),
-    coinbaseWallet({
-      appName: 'Proof of Existence',
-    }),
-  ],
+    })
+  );
+}
+
+export const config = createConfig({
+  chains: [base],
+  connectors,
   transports: {
     [base.id]: http(`https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`),
   },
