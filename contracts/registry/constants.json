@@ -1,9 +1,17 @@
 {
-  "base": {
+  "base_old": {
     "address": "0x859fe07d2995875319b7e65592812392b16bbade",
     "config": {
       "minFee": "0",
       "maxFee": "0",
+      "owner": "0xa88630300706488e9d31597ccC4394206F4D4C6C"
+    }
+  },
+  "base": {
+    "address": "0x2B21d271497DD10e25218dfC6312e61FB0E31823",
+    "config": {
+      "minFee": "0",
+      "maxFee": "1474000000000000",
       "owner": "0xa88630300706488e9d31597ccC4394206F4D4C6C"
     }
   }

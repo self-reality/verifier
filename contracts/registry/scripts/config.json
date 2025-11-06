@@ -8,7 +8,7 @@
   "base": {
     "config": {
       "minFee": "0",
-      "maxFee": "0"
+      "maxFee": "1474000000000000"
     }
   },
   "polygon": {
