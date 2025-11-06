@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { verifierRegistryContract } from '../constants/contracts';
 import { getCurrencyTicker, roundDownWei, fetchPriceFeed, validateFilename, computeSHA256, formatUnixTime, formatHumanTime, renderProgressBar } from '../utils';
+import { generateCertificatePDF } from '../utils/pdfGenerator';
 
 // Fee configuration (in cents, e.g., 100 = $1.00, 1 = $0.01)
 const FEE_CENTS = 1;
@@ -44,7 +45,7 @@ export default function Home() {
   // Message states for each section
   const [uploadMessage, setUploadMessage] = useState('');
   const [verifyMessage, setVerifyMessage] = useState('');
-  const [downloadMessage, setDownloadMessage] = useState('[ INFO ]: PDF generation may take up to 30 seconds');
+  const [downloadMessage, setDownloadMessage] = useState('[ INFO ]: PDF generation typically takes a few seconds');
   
   // Mounted state to prevent hydration mismatch
   const [mounted, setMounted] = useState(false);
@@ -74,14 +75,6 @@ export default function Home() {
   }, []);
 
 
-  useEffect(() => {
-    if (pdfProgress > 0 && pdfProgress < 100) {
-      const timer = setTimeout(() => {
-        setPdfProgress(prev => Math.min(prev + 5, 100));
-      }, 30);
-      return () => clearTimeout(timer);
-    }
-  }, [pdfProgress]);
 
   // Fetch price when wallet connects or chain changes
   useEffect(() => {
@@ -112,12 +105,6 @@ export default function Home() {
     fetchPrice();
   }, [walletConnected, chainId]);
 
-  // Watch for transaction confirmation and start PDF generation
-  useEffect(() => {
-    if (isTxConfirmed && pdfProgress === 0) {
-      setPdfProgress(1);
-    }
-  }, [isTxConfirmed, pdfProgress]);
 
   // Handle connection errors
   useEffect(() => {
@@ -265,7 +252,7 @@ export default function Home() {
     setShowResetConfirmOverlay(false);
     setUploadMessage('');
     setVerifyMessage('');
-    setDownloadMessage('[ INFO ]: PDF generation may take up to 30 seconds');
+    setDownloadMessage('[ INFO ]: PDF generation typically takes a few seconds');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -642,11 +629,40 @@ export default function Home() {
             {/* Download Section */}
             <div className="pixel-box" style={{ textAlign: 'center' }}>
               <button
-                onClick={() => {
-                  setDownloadClicked(true);
+                onClick={async () => {
+                  if (!walletAddress || !chainId || !txHash || !feeAmountWei) {
+                    setDownloadMessage('[ ERROR !!! ]: Missing required data for certificate');
+                    return;
+                  }
+
+                  try {
+                    setPdfProgress(1);
+                    setDownloadMessage('[ INFO ]: Generating PDF certificate...');
+                    
+                    await generateCertificatePDF(
+                      {
+                        filename: editedFilename || filename,
+                        sha256Hash: fileHash,
+                        walletAddress: walletAddress,
+                        timestamp: currentTime,
+                        chainId: chainId,
+                        transactionHash: txHash,
+                        feeAmountWei: feeAmountWei,
+                        feeCurrencyTicker: feeCurrencyTicker,
+                      },
+                      (progress) => setPdfProgress(progress)
+                    );
+                    
+                    setDownloadClicked(true);
+                    setDownloadMessage('[ SUCCESS ]: PDF certificate generated and downloaded!');
+                  } catch (error) {
+                    console.error('PDF generation error:', error);
+                    setDownloadMessage('[ ERROR !!! ]: Failed to generate PDF certificate');
+                    setPdfProgress(0);
+                  }
                 }}
-                disabled={pdfProgress < 100}
-                className={`btn btn-large btn-full-width ${pdfProgress === 100 ? '' : 'btn-disabled'}`}
+                disabled={transactionStatus !== 'minted' || pdfProgress > 0}
+                className={`btn btn-large btn-full-width ${transactionStatus === 'minted' && pdfProgress === 0 ? '' : 'btn-disabled'}`}
                 style={{
                   padding: '15px 30px',
                   marginBottom: '15px'

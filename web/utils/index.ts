@@ -98,16 +98,6 @@ export const validateFilename = (name: string): { isValid: boolean; sanitized: s
   return { isValid: true, sanitized, warnings };
 };
 
-// Generate CIDv1 format (bafy... with base32 characters)
-export const generateCIDv1 = () => {
-  const base32Chars = 'abcdefghijklmnopqrstuvwxyz234567';
-  let cid = 'bafy';
-  for (let i = 0; i < 55; i++) {
-    cid += base32Chars[Math.floor(Math.random() * base32Chars.length)];
-  }
-  return cid;
-};
-
 export const formatUnixTime = (timestamp: number) => {
   return Math.floor(timestamp / 1000).toString();
 };
@@ -124,6 +114,48 @@ export const renderProgressBar = (progress: number) => {
   const blocks = 20;
   const filled = Math.floor((progress / 100) * blocks);
   return '█'.repeat(filled) + '░'.repeat(blocks - filled);
+};
+
+// Map chainId to network name
+export const getNetworkName = (chainId: number | undefined): string => {
+  if (!chainId) return 'Unknown Network';
+  switch (chainId) {
+    case 1:
+      return 'Ethereum Mainnet';
+    case 8453:
+      return 'Base';
+    case 137:
+      return 'Polygon';
+    case 10:
+      return 'Optimism';
+    default:
+      return `Chain ${chainId}`;
+  }
+};
+
+// Generate block explorer event log URL
+export const getEventLogUrl = (chainId: number | undefined, txHash: string): string => {
+  if (!chainId || !txHash) return '';
+  
+  let explorerDomain: string;
+  switch (chainId) {
+    case 1:
+      explorerDomain = 'etherscan.io';
+      break;
+    case 8453:
+      explorerDomain = 'basescan.org';
+      break;
+    case 137:
+      explorerDomain = 'polygonscan.com';
+      break;
+    case 10:
+      explorerDomain = 'optimistic.etherscan.io';
+      break;
+    default:
+      return '';
+  }
+  
+  return `https://${explorerDomain}/tx/${txHash}#eventlog`;
 };
 
 // Compute SHA-256 hash of a file with progress tracking
