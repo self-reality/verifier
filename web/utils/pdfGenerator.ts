@@ -62,6 +62,23 @@ export async function generateCertificatePDF(
       return currentY;
     };
 
+    // Helper function to add wrapped text with clickable link
+    const addWrappedTextWithLink = (text: string, url: string, currentY: number, indent: number = 0): number => {
+      const maxWidth = rightMargin - leftMargin - indent;
+      const lines = doc.splitTextToSize(text, maxWidth);
+      const fontSize = doc.getFontSize();
+      const textHeight = fontSize * 0.35; // Approximate text height in mm
+      
+      for (const line of lines) {
+        doc.text(line, leftMargin + indent, currentY);
+        // Add clickable link for this line
+        const textWidth = doc.getTextWidth(line);
+        doc.link(leftMargin + indent, currentY - textHeight, textWidth, textHeight, { url });
+        currentY += lineHeight;
+      }
+      return currentY;
+    };
+
     // ========== HEADER ==========
     doc.setFontSize(12);
     doc.text('PROOF OF EXISTENCE CERTIFICATE', leftMargin, y);
@@ -131,7 +148,7 @@ export async function generateCertificatePDF(
     y += lineHeight;
     doc.text('Event Log URL:', leftMargin, y);
     y += lineHeight;
-    y = addWrappedText(`  ${eventLogUrl}`, y, 2);
+    y = addWrappedTextWithLink(`  ${eventLogUrl}`, eventLogUrl, y, 2);
     y += 4;
     
     if (onProgress) onProgress(50);

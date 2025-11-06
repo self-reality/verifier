@@ -23,7 +23,7 @@ async function testPdfGeneration() {
     walletAddress: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
     timestamp: Date.now(),
     chainId: 8453, // Base
-    transactionHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+    transactionHash: '0x28b737965c7639578fae86da5032f328e8020c6f0d8c7c9279606c0e90de684d',
     feeAmountWei: BigInt('3500000000000000'), // ~0.0035 ETH
     feeCurrencyTicker: 'ETH',
   };
