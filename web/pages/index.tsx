@@ -3,69 +3,8 @@ import Head from 'next/head';
 import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { verifierRegistryContract } from '../constants/contracts';
 
-// Price feed configuration
-const PRICE_FEED_URL = process.env.NEXT_PUBLIC_PRICE_FEED_URL || 'https://price-feed.porobov-p3798.workers.dev';
-
-// Fee configuration (in USD)
-const FEE_USD = 1;
-
-// Map chainId to currency ticker
-function getCurrencyTicker(chainId: number | undefined): string | null {
-  if (!chainId) return null;
-  switch (chainId) {
-    case 1: // Ethereum Mainnet
-    case 8453: // Base
-      return 'ETH';
-    case 137: // Polygon
-      return 'POL';
-    case 10: // Optimism
-      return 'OP';
-    default:
-      return null;
-  }
-}
-
-// Round down bigint to significant figures for cleaner display and lower gas
-function roundDownWei(amountWei: bigint): bigint {
-  const str = amountWei.toString();
-  if (str.length <= 3) return amountWei;
-  
-  // Keep 2-3 significant figures, round down the rest
-  const sigFigs = 3;
-  const zeros = str.length - sigFigs;
-  let divisor = BigInt(1);
-  for (let i = 0; i < zeros; i++) {
-    divisor = divisor * BigInt(10);
-  }
-  return (amountWei / divisor) * divisor;
-}
-
-// Fetch price from worker (always fetches rate for $1, then multiplies by FEE_USD)
-async function fetchPriceFeed(chainId: number): Promise<{ amountWei: bigint; priceUsd: number; ticker: string }> {
-  const ticker = getCurrencyTicker(chainId);
-  if (!ticker) {
-    throw new Error('Unsupported chain');
-  }
-  
-  // Always fetch conversion rate for $1 USD
-  const url = `${PRICE_FEED_URL}/api/usd-to-amount?usd=1&chainId=${chainId}`;
-  const response = await fetch(url);
-  
-  if (!response.ok) {
-    throw new Error(`Failed to fetch price: ${response.status}`);
-  }
-  
-  const data = await response.json();
-  // Multiply the $1 rate by the configured fee amount
-  const rawAmountWei = BigInt(data.amountWei) * BigInt(FEE_USD);
-  const amountWei = roundDownWei(rawAmountWei);
-  
-  return {
-    amountWei,
-    priceUsd: data.priceUsd,
-    ticker
-  };
-}
+// Fee configuration (in cents, e.g., 100 = $1.00, 1 = $0.01)
+const FEE_CENTS = 1;
 
 export default function Home() {
   // Wagmi hooks
@@ -121,53 +60,6 @@ export default function Home() {
     'idle';
   
   const transactionHash = txHash || '';
-
-  // Filename validation utility
-  const validateFilename = (name: string): { isValid: boolean; sanitized: string; warnings: string[] } => {
-    const warnings: string[] = [];
-    let sanitized = name;
-    
-    // Convert to lowercase
-    if (sanitized !== sanitized.toLowerCase()) {
-      sanitized = sanitized.toLowerCase();
-      warnings.push('Uppercase letters converted to lowercase');
-    }
-    
-    // Replace invalid characters with empty string
-    const originalLength = sanitized.length;
-    sanitized = sanitized.replace(/[^a-z0-9\-_.]/g, '');
-    if (sanitized.length < originalLength) {
-      warnings.push('Invalid characters removed');
-    }
-    
-    // Remove leading/trailing dashes and dots
-    const beforeTrim = sanitized;
-    sanitized = sanitized.replace(/^[\-\.]+|[\-\.]+$/g, '');
-    if (sanitized !== beforeTrim) {
-      warnings.push('Leading/trailing dashes and dots removed');
-    }
-    
-    // Check length
-    if (sanitized.length === 0) {
-      return { isValid: false, sanitized: '', warnings: ['Filename cannot be empty'] };
-    }
-    if (sanitized.length > 128) {
-      sanitized = sanitized.substring(0, 128);
-      warnings.push('Filename truncated to 128 characters');
-    }
-    
-    return { isValid: true, sanitized, warnings };
-  };
-
-  // Generate CIDv1 format (bafy... with base32 characters)
-  const generateCIDv1 = () => {
-    const base32Chars = 'abcdefghijklmnopqrstuvwxyz234567';
-    let cid = 'bafy';
-    for (let i = 0; i < 55; i++) {
-      cid += base32Chars[Math.floor(Math.random() * base32Chars.length)];
-    }
-    return cid;
-  };
 
   useEffect(() => {
     // Generate CIDv1 and set initial time only on client side to avoid hydration mismatch
@@ -225,7 +117,7 @@ export default function Home() {
       setFeeLoading(true);
       setFeeError('');
       try {
-        const result = await fetchPriceFeed(chainId);
+        const result = await fetchPriceFeed(chainId, FEE_CENTS / 100);
         setFeeAmountWei(result.amountWei);
         setFeeCurrencyTicker(result.ticker);
       } catch (error) {
@@ -425,24 +317,6 @@ export default function Home() {
     } catch (error: any) {
       setVerifyMessage('[ ERROR !!! ]: ' + (error.message || 'Failed to send transaction'));
     }
-  };
-
-  const formatUnixTime = (timestamp: number) => {
-    return Math.floor(timestamp / 1000).toString();
-  };
-
-  const formatHumanTime = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const hours = date.getUTCHours().toString().padStart(2, '0');
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
-  };
-
-  const renderProgressBar = (progress: number) => {
-    const blocks = 20;
-    const filled = Math.floor((progress / 100) * blocks);
-    return '█'.repeat(filled) + '░'.repeat(blocks - filled);
   };
 
   return (
