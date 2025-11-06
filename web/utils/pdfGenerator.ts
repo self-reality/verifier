@@ -86,23 +86,13 @@ export async function generateCertificatePDF(
     
     doc.text('SHA-256 Hash (FIPS 180-4):', leftMargin, y);
     y += lineHeight;
-    // Split hash into two lines for readability
-    const hashLine1 = data.sha256Hash.substring(0, 32);
-    const hashLine2 = data.sha256Hash.substring(32);
-    doc.text(`  ${hashLine1}`, leftMargin, y);
-    y += lineHeight;
-    doc.text(`  ${hashLine2}`, leftMargin, y);
-    y += lineHeight + 2;
+    y = addWrappedText(`  ${data.sha256Hash}`, y, 2);
+    y += 2;
     
     doc.text('Wallet Address:', leftMargin, y);
     y += lineHeight;
-    // Split address into two lines
-    const addrLine1 = data.walletAddress.substring(0, 21);
-    const addrLine2 = data.walletAddress.substring(21);
-    doc.text(`  ${addrLine1}`, leftMargin, y);
-    y += lineHeight;
-    doc.text(`  ${addrLine2}`, leftMargin, y);
-    y += lineHeight + 2;
+    y = addWrappedText(`  ${data.walletAddress}`, y, 2);
+    y += 2;
     
     const timestampDate = new Date(data.timestamp);
     doc.text('Timestamp:', leftMargin, y);
@@ -115,6 +105,8 @@ export async function generateCertificatePDF(
     if (onProgress) onProgress(40);
 
     // ========== NETWORK INFORMATION ==========
+    const eventLogUrl = getEventLogUrl(data.chainId, data.transactionHash);
+    
     y += lineHeight;
     doc.text('NETWORK INFORMATION', leftMargin, y);
     y += lineHeight;
@@ -129,34 +121,20 @@ export async function generateCertificatePDF(
     
     doc.text('Transaction Hash:', leftMargin, y);
     y += lineHeight;
-    // Split tx hash into two lines
-    const txLine1 = data.transactionHash.substring(0, 34);
-    const txLine2 = data.transactionHash.substring(34);
-    doc.text(`  ${txLine1}`, leftMargin, y);
-    y += lineHeight;
-    doc.text(`  ${txLine2}`, leftMargin, y);
-    y += lineHeight + 2;
+    y = addWrappedText(`  ${data.transactionHash}`, y, 2);
+    y += 2;
     
     const feeInNative = (Number(data.feeAmountWei) / 1e18).toFixed(6);
     doc.text(`Fee:         ${feeInNative} ${data.feeCurrencyTicker} ($0.01)`, leftMargin, y);
     y += lineHeight;
-
-    if (onProgress) onProgress(50);
-
-    // ========== TRANSACTION URL & QR CODE ==========
-    y += lineHeight;
-    doc.text('TRANSACTION EVENT LOG', leftMargin, y);
-    y += lineHeight;
-    drawBorder(y, y + 1);
-    y += lineHeight;
     
-    const eventLogUrl = getEventLogUrl(data.chainId, data.transactionHash);
-    doc.text('URL:', leftMargin, y);
+    y += lineHeight;
+    doc.text('Event Log URL:', leftMargin, y);
     y += lineHeight;
     y = addWrappedText(`  ${eventLogUrl}`, y, 2);
     y += 4;
     
-    if (onProgress) onProgress(60);
+    if (onProgress) onProgress(50);
 
     // Generate QR code
     try {
@@ -178,10 +156,15 @@ export async function generateCertificatePDF(
       doc.text('  [QR Code generation failed]', leftMargin, y);
       y += lineHeight;
     }
+    
+    if (onProgress) onProgress(60);
 
     if (onProgress) onProgress(70);
 
     // ========== VERIFICATION INSTRUCTIONS ==========
+    doc.addPage();
+    y = 20;
+    
     doc.text('VERIFICATION INSTRUCTIONS', leftMargin, y);
     y += lineHeight;
     drawBorder(y, y + 1);
