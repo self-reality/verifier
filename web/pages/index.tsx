@@ -6,6 +6,9 @@ import { verifierRegistryContract } from '../constants/contracts';
 // Price feed configuration
 const PRICE_FEED_URL = process.env.NEXT_PUBLIC_PRICE_FEED_URL || 'https://price-feed.porobov-p3798.workers.dev';
 
+// Fee configuration (in USD)
+const FEE_USD = 1;
+
 // Map chainId to currency ticker
 function getCurrencyTicker(chainId: number | undefined): string | null {
   if (!chainId) return null;
@@ -37,13 +40,14 @@ function roundDownWei(amountWei: bigint): bigint {
   return (amountWei / divisor) * divisor;
 }
 
-// Fetch price from worker
+// Fetch price from worker (always fetches rate for $1, then multiplies by FEE_USD)
 async function fetchPriceFeed(chainId: number): Promise<{ amountWei: bigint; priceUsd: number; ticker: string }> {
   const ticker = getCurrencyTicker(chainId);
   if (!ticker) {
     throw new Error('Unsupported chain');
   }
   
+  // Always fetch conversion rate for $1 USD
   const url = `${PRICE_FEED_URL}/api/usd-to-amount?usd=1&chainId=${chainId}`;
   const response = await fetch(url);
   
@@ -52,7 +56,8 @@ async function fetchPriceFeed(chainId: number): Promise<{ amountWei: bigint; pri
   }
   
   const data = await response.json();
-  const rawAmountWei = BigInt(data.amountWei);
+  // Multiply the $1 rate by the configured fee amount
+  const rawAmountWei = BigInt(data.amountWei) * BigInt(FEE_USD);
   const amountWei = roundDownWei(rawAmountWei);
   
   return {
