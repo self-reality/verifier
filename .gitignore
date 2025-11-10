@@ -33,3 +33,4 @@ artifacts/
 .cursor/worktrees.json
 web/.env.local
 web/test-output/test-certificate.pdf
+/web/out

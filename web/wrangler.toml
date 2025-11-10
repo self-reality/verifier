@@ -1,0 +1,8 @@
+name = "akashi-notari"
+pages_build_output_dir = "out"
+compatibility_date = "2025-11-10"
+
+# This file configures Cloudflare Pages deployment
+# The static site will be deployed from the 'out' directory
+
+

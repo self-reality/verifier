@@ -1,7 +1,7 @@
 import { http, createConfig } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { QueryClient } from '@tanstack/react-query';
-import { injected, walletConnect, coinbaseWallet } from '@wagmi/connectors';
+import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
 
 // Get Alchemy API key from environment
 const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_KEY || '';
