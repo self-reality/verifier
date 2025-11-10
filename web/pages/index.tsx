@@ -324,9 +324,9 @@ export default function Home() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div className="logo">
-                P
+              証 
               </div>
-              <span className="text-md">PROOF OF EXISTENCE</span>
+              <span className="text-md">Akashi Notari | Simple Proof of Existence</span>
             </div>
             <div>
               {walletConnected && mounted ? (
@@ -354,7 +354,7 @@ export default function Home() {
             </div>
           </div>
           <div className="text-xs">
-            VERIFY ANY DOC ON BLOCKCHAIN FOR JUST $1. (YOUR FILE NEVER LEAVES YOUR COMPUTER).
+            VERIFY AND TIMESTAMP ANY FILE FOR JUST $1. YOUR PROOF NEVER LEAVES BLOCKCHAIN.
           </div>
         </header>
 
@@ -384,6 +384,8 @@ export default function Home() {
               <button className="btn btn-large">
                 SELECT
               </button>
+              <br />
+               ( your file never leaves your computer )
             </div>
           )}
 
