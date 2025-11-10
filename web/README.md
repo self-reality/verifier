@@ -32,7 +32,6 @@ Visit http://localhost:3000 (or is it 3001?)
 To test the `generateCertificatePDF` function independently:
 
 ```bash
-cd /Users/petrporobov/Projects/Verifier
 npx tsx web/utils/testPdfGenerator.ts
 ```
 
