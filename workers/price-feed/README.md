@@ -60,16 +60,16 @@ curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453&provider=coinge
 Production examples:
 ```
 # Health check
-curl "https://price-feed.porobov-p3798.workers.dev/health"
+curl "https://price-feed.akashi-notari.com/health"
 
 # Get ETH amount for $1 on Base (chain 8453)
-curl "https://price-feed.porobov-p3798.workers.dev/api/usd-to-amount?usd=1&chainId=8453"
+curl "https://price-feed.akashi-notari.com/api/usd-to-amount?usd=1&chainId=8453"
 
 # Use CoinGecko provider
-curl "https://price-feed.porobov-p3798.workers.dev/api/usd-to-amount?usd=1&chainId=8453&provider=coingecko"
+curl "https://price-feed.akashi-notari.com/api/usd-to-amount?usd=1&chainId=8453&provider=coingecko"
 
 # Strict mode (no fallback)
-curl "https://price-feed.porobov-p3798.workers.dev/api/usd-to-amount?usd=1&chainId=8453&provider=coindesk&strict=1"
+curl "https://price-feed.akashi-notari.com/api/usd-to-amount?usd=1&chainId=8453&provider=coindesk&strict=1"
 
 ```
 

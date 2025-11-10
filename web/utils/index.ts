@@ -1,5 +1,5 @@
 // Price feed configuration
-const PRICE_FEED_URL = process.env.NEXT_PUBLIC_PRICE_FEED_URL || 'https://price-feed.porobov-p3798.workers.dev';
+const PRICE_FEED_URL = process.env.NEXT_PUBLIC_PRICE_FEED_URL || 'https://price-feed.akashi-notari.com';
 
 // Map chainId to currency ticker
 export function getCurrencyTicker(chainId: number | undefined): string | null {

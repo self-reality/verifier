@@ -4,7 +4,7 @@ compatibility_date = "2024-09-23"
 
 [vars]
 CACHE_TTL_SECONDS = 3600
-ORIGINS_ALLOWLIST = ""
+ORIGINS_ALLOWLIST = "https://akashi-notari.com,https://www.akashi-notari.com,http://localhost:3000"
 RATE_LIMIT_PER_MIN = 60
 
 [observability]
