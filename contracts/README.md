@@ -156,10 +156,6 @@ Note: Using Etherscan V2 API format (single API key for all networks)
 
 ### 3. Run Verification
 ```bash
-npm run verify:base
-# or
-npm run verify:sepolia
-# or for other networks:
 npx hardhat run scripts/verify.js --network <network-name>
 ```
 

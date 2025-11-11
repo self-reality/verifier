@@ -5,10 +5,7 @@
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",
-    "lint": "echo 'no lint configured'",
-    "deploy:sepolia": "hardhat run scripts/deploy.js --network baseSepolia",
-    "verify:base": "hardhat run scripts/verify.js --network base",
-    "verify:sepolia": "hardhat run scripts/verify.js --network baseSepolia"
+    "lint": "echo 'no lint configured'"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
