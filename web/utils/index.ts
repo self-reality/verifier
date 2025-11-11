@@ -66,21 +66,21 @@ export const validateFilename = (name: string): { isValid: boolean; sanitized: s
   // Convert to lowercase
   if (sanitized !== sanitized.toLowerCase()) {
     sanitized = sanitized.toLowerCase();
-    warnings.push('Uppercase letters converted to lowercase');
+    warnings.push('Filename uppercase letters converted to lowercase');
   }
   
   // Replace invalid characters with empty string
   const originalLength = sanitized.length;
   sanitized = sanitized.replace(/[^a-z0-9\-_.]/g, '');
   if (sanitized.length < originalLength) {
-    warnings.push('Invalid characters removed');
+    warnings.push('Filename invalid characters removed');
   }
   
   // Remove leading/trailing dashes and dots
   const beforeTrim = sanitized;
   sanitized = sanitized.replace(/^[\-\.]+|[\-\.]+$/g, '');
   if (sanitized !== beforeTrim) {
-    warnings.push('Leading/trailing dashes and dots removed');
+    warnings.push('Filename leading/trailing dashes and dots removed');
   }
   
   // Check length
