@@ -36,3 +36,16 @@ npx tsx web/utils/testPdfGenerator.ts
 ```
 
 This generates a test certificate PDF without running the full app.
+
+## Deployment
+
+1. **Build static export:**
+```bash
+cd web
+pnpm build
+```
+
+2. **Deploy to Cloudflare Pages:**
+```bash
+npx wrangler pages deploy out --project-name akashi-notari
+```
