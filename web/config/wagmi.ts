@@ -28,11 +28,10 @@ const connectors = [
     projectId,
     metadata: {
       name: 'Proof of Existence',
-      description: 'Verify any document on blockchain',
+      description: 'Verify and register proofs on-chain',
       url: typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000',
-      icons: [`${typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000'}/icon.png`]
-    },
-    showQrModal: true,
+      icons: []
+    }
   }),
 ];
 
