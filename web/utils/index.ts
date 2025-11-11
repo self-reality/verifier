@@ -7,11 +7,8 @@ export function getCurrencyTicker(chainId: number | undefined): string | null {
   switch (chainId) {
     case 1: // Ethereum Mainnet
     case 8453: // Base
-      return 'ETH';
-    case 137: // Polygon
-      return 'POL';
     case 10: // Optimism
-      return 'OP';
+      return 'ETH';
     default:
       return null;
   }
@@ -39,8 +36,8 @@ export async function fetchPriceFeed(chainId: number, feeCents: number): Promise
     throw new Error('Unsupported chain');
   }
   
-  // Always fetch conversion rate for $1 USD
-  const url = `${PRICE_FEED_URL}/api/usd-to-amount?usd=1&chainId=${chainId}`;
+  // Fetch conversion rate for $1 USD using ticker
+  const url = `${PRICE_FEED_URL}/api/usd-to-amount?ticker=${ticker}`;
   const response = await fetch(url);
   
   if (!response.ok) {
@@ -124,10 +121,8 @@ export const getNetworkName = (chainId: number | undefined): string => {
       return 'Ethereum Mainnet';
     case 8453:
       return 'Base';
-    case 137:
-      return 'Polygon';
     case 10:
-      return 'Optimism';
+      return 'OP Mainnet';
     default:
       return `Chain ${chainId}`;
   }
@@ -142,8 +137,6 @@ export const getExplorerDomain = (chainId: number | undefined): string => {
       return 'etherscan.io';
     case 8453:
       return 'basescan.org';
-    case 137:
-      return 'polygonscan.com';
     case 10:
       return 'optimistic.etherscan.io';
     default:

@@ -56,14 +56,13 @@ function isRateLimited(ip, limit, windowMs) {
   return state.count > limit;
 }
 
-function chainIdToCoingeckoId(chainId) {
-  switch (Number(chainId)) {
-    case 1: // Ethereum
-    case 8453: // Base mainnet, native token ETH
+function tickerToCoingeckoId(ticker) {
+  switch (ticker.toUpperCase()) {
+    case 'ETH':
       return 'ethereum';
-    case 137:
+    case 'POL':
       return 'polygon-ecosystem-token';
-    case 10: // Optimism
+    case 'OP':
       return 'optimism';
     default:
       return null;
@@ -148,19 +147,18 @@ async function getPriceUsd(tokenId, env, provider, strict) {
 
 async function handleUsdToAmount(request, env, ctx) {
   const url = new URL(request.url);
-  const usdParam = url.searchParams.get('usd');
-  const chainIdParam = url.searchParams.get('chainId');
+  const tickerParam = url.searchParams.get('ticker');
   const providerParam = url.searchParams.get('provider');
   const strictParam = url.searchParams.get('strict');
-  const usd = Number(usdParam);
-  const chainId = Number(chainIdParam);
-  if (!usdParam || Number.isNaN(usd) || usd <= 0 || !chainIdParam || Number.isNaN(chainId)) {
-    return new Response(JSON.stringify({ error: 'Expected query: usd>0 & chainId' }), { status: 400, headers: TEXT_JSON });
+  const usd = 1; // Always return price for $1 USD
+  
+  if (!tickerParam) {
+    return new Response(JSON.stringify({ error: 'Expected query parameter: ticker' }), { status: 400, headers: TEXT_JSON });
   }
 
-  const tokenId = chainIdToCoingeckoId(chainId);
+  const tokenId = tickerToCoingeckoId(tickerParam);
   if (!tokenId) {
-    return new Response(JSON.stringify({ error: 'Unsupported chainId' }), { status: 400, headers: TEXT_JSON });
+    return new Response(JSON.stringify({ error: 'Unsupported ticker' }), { status: 400, headers: TEXT_JSON });
   }
 
   // Validate provider if provided; default is coindesk
@@ -188,8 +186,7 @@ async function handleUsdToAmount(request, env, ctx) {
   const { priceUsd, providerUsed } = await getPriceUsd(tokenId, env, provider, strict);
   const amountWei = computeWeiForUsd(usd, priceUsd);
   const payload = {
-    chainId,
-    usd,
+    ticker: tickerParam.toUpperCase(),
     tokenId,
     priceUsd,
     providerRequested: provider,
