@@ -37,7 +37,6 @@ export default function Home() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [downloadClicked, setDownloadClicked] = useState(false);
   const [showResetConfirmOverlay, setShowResetConfirmOverlay] = useState(false);
-  const [pdfProgress, setPdfProgress] = useState(0);
   const [showConnectorSelection, setShowConnectorSelection] = useState(false);
   const [filenameEditWarning, setFilenameEditWarning] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -191,8 +190,6 @@ export default function Home() {
       }
 
       try {
-        setPdfProgress(1);
-        
         await generateCertificatePDF(
           {
             filename: editedFilename || filename,
@@ -203,15 +200,13 @@ export default function Home() {
             transactionHash: txHash,
             feeAmountWei: feeAmountWei,
             feeCurrencyTicker: feeCurrencyTicker,
-          },
-          (progress) => setPdfProgress(progress)
+          }
         );
         
         setDownloadClicked(true);
       } catch (error) {
         console.error('PDF generation error:', error);
         setDownloadMessage('[ ERROR !!! ]: Failed to generate PDF certificate');
-        setPdfProgress(0);
       }
     };
 
@@ -308,7 +303,6 @@ export default function Home() {
     setFileHash('');
     setTermsAccepted(false);
     setDownloadClicked(false);
-    setPdfProgress(0);
     setShowResetConfirmOverlay(false);
     setUploadMessage('');
     setVerifyMessage('');
@@ -745,7 +739,6 @@ export default function Home() {
                   }
 
                   try {
-                    setPdfProgress(1);
                     setDownloadMessage('[ INFO ]: Generating PDF certificate...');
                     
                     await generateCertificatePDF(
@@ -758,8 +751,7 @@ export default function Home() {
                         transactionHash: txHash,
                         feeAmountWei: feeAmountWei,
                         feeCurrencyTicker: feeCurrencyTicker,
-                      },
-                      (progress) => setPdfProgress(progress)
+                      }
                     );
                     
                     setDownloadClicked(true);
@@ -767,11 +759,10 @@ export default function Home() {
                   } catch (error) {
                     console.error('PDF generation error:', error);
                     setDownloadMessage('[ ERROR !!! ]: Failed to generate PDF certificate');
-                    setPdfProgress(0);
                   }
                 }}
-                disabled={transactionStatus !== 'minted' || pdfProgress > 0}
-                className={`btn btn-large btn-full-width ${transactionStatus === 'minted' && pdfProgress === 0 ? '' : 'btn-disabled'}`}
+                disabled={transactionStatus !== 'minted'}
+                className={`btn btn-large btn-full-width ${transactionStatus === 'minted' ? '' : 'btn-disabled'}`}
                 style={{
                   padding: '15px 30px',
                   marginBottom: '15px'

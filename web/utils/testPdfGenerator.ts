@@ -37,19 +37,10 @@ async function testPdfGeneration() {
   console.log(`   Fee:              ${(Number(mockData.feeAmountWei) / 1e18).toFixed(6)} ${mockData.feeCurrencyTicker}`);
   console.log(`   Timestamp:        ${new Date(mockData.timestamp).toUTCString()}\n`);
 
-  // Progress callback
-  let lastProgress = 0;
-  const onProgress = (progress: number) => {
-    if (progress - lastProgress >= 10 || progress === 100) {
-      console.log(`⏳ Progress: ${progress}%`);
-      lastProgress = progress;
-    }
-  };
-
   try {
     // Generate PDF in buffer mode
     console.log('🔧 Generating PDF...');
-    const pdfBuffer = await generateCertificatePDF(mockData, onProgress, 'buffer');
+    const pdfBuffer = await generateCertificatePDF(mockData, undefined, 'buffer');
 
     if (!pdfBuffer) {
       throw new Error('PDF buffer is empty');
