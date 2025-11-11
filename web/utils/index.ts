@@ -124,7 +124,7 @@ export const getNetworkName = (chainId: number | undefined): string => {
     case 10:
       return 'OP Mainnet';
     default:
-      return `Chain ${chainId}`;
+      return 'Wrong Network';
   }
 };
 
