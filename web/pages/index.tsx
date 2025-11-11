@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Head from 'next/head';
-import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { verifierRegistryContract } from '../constants/contracts';
-import { getCurrencyTicker, roundDownWei, fetchPriceFeed, validateFilename, computeSHA256, formatUnixTime, formatHumanTime, renderProgressBar } from '../utils';
+import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
+import { getVerifierRegistryContract, SUPPORTED_CHAIN_IDS } from '../constants/contracts';
+import { getCurrencyTicker, roundDownWei, fetchPriceFeed, validateFilename, computeSHA256, formatUnixTime, formatHumanTime, renderProgressBar, getNetworkName, getTxUrl, getExplorerDomain } from '../utils';
 import { generateCertificatePDF } from '../utils/pdfGenerator';
 
 // Fee configuration (in cents, e.g., 100 = $1.00, 1 = $0.01)
@@ -13,6 +13,7 @@ export default function Home() {
   const { address: walletAddress, isConnected: walletConnected, chainId } = useAccount();
   const { connectors, connect, error: connectError, reset: resetConnect } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
   const { data: txHash, writeContract, error: writeError, isPending: isTxPending } = useWriteContract();
   const { isLoading: isTxConfirming, isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
@@ -47,8 +48,17 @@ export default function Home() {
   const [verifyMessage, setVerifyMessage] = useState('');
   const [downloadMessage, setDownloadMessage] = useState('[ INFO ]: PDF generation typically takes a few seconds');
   
+  // Network validation state
+  const [showNetworkSelector, setShowNetworkSelector] = useState(false);
+  
   // Mounted state to prevent hydration mismatch
   const [mounted, setMounted] = useState(false);
+
+  // Helper function to check if network is supported
+  const isNetworkSupported = (chainId: number | undefined): boolean => {
+    if (!chainId) return false;
+    return SUPPORTED_CHAIN_IDS.includes(chainId as any);
+  };
 
   // Derived states from progress values
   const isUploading = uploadProgress >= 0 && uploadProgress < 100;
@@ -105,6 +115,17 @@ export default function Home() {
     fetchPrice();
   }, [walletConnected, chainId]);
 
+  // Network validation
+  useEffect(() => {
+    if (walletConnected && chainId && !isNetworkSupported(chainId)) {
+      setVerifyMessage(`[ WARNING ]: You are connected to ${getNetworkName(chainId)}. Please switch to a supported network.`);
+    } else if (walletConnected && chainId && isNetworkSupported(chainId)) {
+      // Clear warning when on supported network
+      if (verifyMessage.includes('WARNING') && verifyMessage.includes('switch to a supported network')) {
+        setVerifyMessage('');
+      }
+    }
+  }, [walletConnected, chainId]);
 
   // Handle connection errors
   useEffect(() => {
@@ -156,9 +177,11 @@ export default function Home() {
   // Show success message when transaction is sent
   useEffect(() => {
     if (txHash && (isTxPending || isTxConfirming) && !isTxConfirmed) {
-      setVerifyMessage(`[ SUCCESS ]: Transaction sent! View on Basescan: https://basescan.org/tx/${txHash}`);
+      const explorerName = chainId ? getNetworkName(chainId) : 'Block Explorer';
+      const txUrl = getTxUrl(chainId, txHash);
+      setVerifyMessage(`[ SUCCESS ]: Transaction sent! View on ${explorerName}: ${txUrl}`);
     }
-  }, [txHash, isTxPending, isTxConfirming, isTxConfirmed]);
+  }, [txHash, isTxPending, isTxConfirming, isTxConfirmed, chainId]);
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
@@ -275,9 +298,31 @@ export default function Home() {
     setVerifyMessage('');
   };
 
+  const handleSwitchNetwork = (targetChainId: number) => {
+    try {
+      switchChain({ chainId: targetChainId });
+      setShowNetworkSelector(false);
+      setVerifyMessage('');
+    } catch (error) {
+      setVerifyMessage('[ ERROR !!! ]: Failed to switch network');
+    }
+  };
+
   const handleVerifyOnChain = () => {
     // Clear previous errors
     setVerifyMessage('');
+    
+    // Validate network
+    if (!chainId) {
+      setVerifyMessage('[ ERROR !!! ]: Please connect your wallet first');
+      return;
+    }
+    
+    if (!isNetworkSupported(chainId)) {
+      setVerifyMessage('[ ERROR !!! ]: Unsupported network. Please switch to Base, Ethereum, Optimism, or Polygon');
+      setShowNetworkSelector(true);
+      return;
+    }
     
     // Validate filename one more time before sending
     const validation = validateFilename(editedFilename || filename);
@@ -292,11 +337,26 @@ export default function Home() {
       return;
     }
     
+    // Get contract for current chain
+    let contract;
+    try {
+      contract = getVerifierRegistryContract(chainId);
+    } catch (error) {
+      setVerifyMessage('[ ERROR !!! ]: Contract not deployed on this network');
+      return;
+    }
+    
+    // Validate contract address is not zero address
+    if (contract.address === '0x0000000000000000000000000000000000000000') {
+      setVerifyMessage('[ ERROR !!! ]: Contract not deployed on this network yet. Please use a different network.');
+      return;
+    }
+    
     // Call the contract
     try {
       writeContract({
-        address: verifierRegistryContract.address,
-        abi: verifierRegistryContract.abi,
+        address: contract.address,
+        abi: contract.abi,
         functionName: 'anchor',
         args: [fileHash, validation.sanitized],
         value: feeAmountWei,
@@ -330,19 +390,38 @@ export default function Home() {
             </div>
             <div>
               {walletConnected && mounted ? (
-                <button
-                  onClick={handleDisconnectWallet}
-                  disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
-                  className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  CONNECTED
-                  <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className="text-xs" style={{ opacity: isNetworkSupported(chainId) ? 1 : 0.6 }}>
+                      {getNetworkName(chainId)}
+                    </span>
+                    <button
+                      onClick={handleDisconnectWallet}
+                      disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
+                      className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      CONNECTED
+                      <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
+                    </button>
+                  </div>
+                  {!isNetworkSupported(chainId) && (
+                    <button
+                      onClick={() => setShowNetworkSelector(true)}
+                      className="btn"
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.7em'
+                      }}
+                    >
+                      ↓ SWITCH NETWORK
+                    </button>
+                  )}
+                </div>
               ) : (
                 <button
                   onClick={handleConnectWallet}
@@ -506,19 +585,24 @@ export default function Home() {
 
               <div style={{ marginBottom: '15px' }}>
                 {walletConnected && mounted ? (
-                  <button
-                    onClick={handleDisconnectWallet}
-                    disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
-                    className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    CONNECTED
-                    <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span className="text-xs" style={{ opacity: isNetworkSupported(chainId) ? 1 : 0.6 }}>
+                      {getNetworkName(chainId)}
+                    </span>
+                    <button
+                      onClick={handleDisconnectWallet}
+                      disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
+                      className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      CONNECTED
+                      <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={handleConnectWallet}
@@ -579,7 +663,7 @@ export default function Home() {
               <div style={{ marginBottom: '10px' }}>
                 <span className="text-xs">NETWORK NAME: </span>
                 {mounted && walletConnected ? (
-                  <span className="text-xs">ETHEREUM MAINNET</span>
+                  <span className="text-xs">{getNetworkName(chainId).toUpperCase()}</span>
                 ) : (
                   <span className="text-xs text-disabled">(CONNECT YOUR WALLET)</span>
                 )}
@@ -596,9 +680,9 @@ export default function Home() {
 
               <div style={{ marginBottom: '15px' }}>
                 <span className="text-xs">TRANSACTION URL: </span>
-                {transactionHash ? (
+                {transactionHash && chainId ? (
                   <a 
-                    href={`https://basescan.org/tx/${transactionHash}`}
+                    href={getTxUrl(chainId, transactionHash)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs word-break-all"
@@ -608,7 +692,7 @@ export default function Home() {
                       cursor: 'pointer'
                     }}
                   >
-                    HTTPS://BASESCAN.ORG/TX/{transactionHash}
+                    {getTxUrl(chainId, transactionHash).toUpperCase()}
                   </a>
                 ) : (
                   <span className="text-xs text-disabled">(SEND VERIFICATION TRANSACTION)</span>
@@ -808,6 +892,37 @@ export default function Home() {
                   className="btn btn-large"
                 >
                   NO, LET ME SAVE IT
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Network Selection Overlay */}
+        {showNetworkSelector && (
+          <div className="overlay">
+            <div className="overlay-content">
+              <h3 className="subsection-title">
+                SELECT NETWORK
+              </h3>
+              <div className="text-xs" style={{ marginBottom: '15px', opacity: 0.7 }}>
+                CHOOSE A SUPPORTED NETWORK:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {SUPPORTED_CHAIN_IDS.map((supportedChainId) => (
+                  <button
+                    key={supportedChainId}
+                    onClick={() => handleSwitchNetwork(supportedChainId)}
+                    className="btn btn-large"
+                  >
+                    {getNetworkName(supportedChainId)}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setShowNetworkSelector(false)}
+                  className="btn btn-large"
+                >
+                  CANCEL
                 </button>
               </div>
             </div>

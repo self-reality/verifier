@@ -133,29 +133,35 @@ export const getNetworkName = (chainId: number | undefined): string => {
   }
 };
 
-// Generate block explorer event log URL
-export const getEventLogUrl = (chainId: number | undefined, txHash: string): string => {
-  if (!chainId || !txHash) return '';
+// Get block explorer domain for a chain
+export const getExplorerDomain = (chainId: number | undefined): string => {
+  if (!chainId) return '';
   
-  let explorerDomain: string;
   switch (chainId) {
     case 1:
-      explorerDomain = 'etherscan.io';
-      break;
+      return 'etherscan.io';
     case 8453:
-      explorerDomain = 'basescan.org';
-      break;
+      return 'basescan.org';
     case 137:
-      explorerDomain = 'polygonscan.com';
-      break;
+      return 'polygonscan.com';
     case 10:
-      explorerDomain = 'optimistic.etherscan.io';
-      break;
+      return 'optimistic.etherscan.io';
     default:
       return '';
   }
-  
-  return `https://${explorerDomain}/tx/${txHash}#eventlog`;
+};
+
+// Generate block explorer transaction URL
+export const getTxUrl = (chainId: number | undefined, txHash: string): string => {
+  const domain = getExplorerDomain(chainId);
+  if (!domain || !txHash) return '';
+  return `https://${domain}/tx/${txHash}`;
+};
+
+// Generate block explorer event log URL
+export const getEventLogUrl = (chainId: number | undefined, txHash: string): string => {
+  const txUrl = getTxUrl(chainId, txHash);
+  return txUrl ? `${txUrl}#eventlog` : '';
 };
 
 // Compute SHA-256 hash of a file with progress tracking

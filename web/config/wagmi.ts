@@ -1,5 +1,5 @@
 import { http, createConfig } from 'wagmi';
-import { base } from 'wagmi/chains';
+import { mainnet, base, optimism, polygon } from 'wagmi/chains';
 import { QueryClient } from '@tanstack/react-query';
 import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
 
@@ -43,10 +43,13 @@ if (projectId) {
 }
 
 export const config = createConfig({
-  chains: [base],
+  chains: [base, mainnet, optimism, polygon],
   connectors,
   transports: {
     [base.id]: http(`https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`),
+    [mainnet.id]: http(`https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`),
+    [optimism.id]: http(`https://opt-mainnet.g.alchemy.com/v2/${alchemyKey}`),
+    [polygon.id]: http(`https://polygon-mainnet.g.alchemy.com/v2/${alchemyKey}`),
   },
 });
 
