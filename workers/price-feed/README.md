@@ -1,82 +1,84 @@
 Price Feed Worker
 
-Endpoints:
-- GET /health → { ok: true }
-- GET /api/usd-to-amount?usd=1&chainId=8453 → { chainId, usd, tokenId, priceUsd, amountWei }
+Cloudflare Worker that provides cryptocurrency price feeds for the Akashi Notari verification service.
 
-Query params:
-- usd: positive number (e.g., 1.25)
-- chainId: EVM chain id (supported: 1, 8453, 84532, 137, 10, 42161)
-- provider: optional price provider; one of `coindesk` (default), `coingecko`
-- strict: optional; when `1` or `true`, disables provider fallback and fails if the requested provider cannot serve a price. Response will include `providerRequested` and `providerUsed`.
+## API Endpoints
 
-Response example:
-```
+- `GET /health` → `{ ok: true }`
+- `GET /api/usd-to-amount?ticker=ETH` → Returns amount in wei for $1 USD
+
+## Query Parameters
+
+- `ticker` (required): Currency ticker - `ETH`, `POL`, or `OP`
+- `provider` (optional): Price provider - `coindesk` (default) or `coingecko`
+- `strict` (optional): Set to `1` or `true` to disable provider fallback
+
+## Response Format
+
+```json
 {
-  "chainId": 8453,
-  "usd": 1,
+  "ticker": "ETH",
   "tokenId": "ethereum",
-  "priceUsd": 2795.12,
+  "priceUsd": 3500.25,
   "providerRequested": "coindesk",
   "providerUsed": "coindesk",
-  "amountWei": "357892345345345" 
+  "amountWei": "285714285714285"
 }
 ```
 
-Notes:
-- amountWei is computed using integer math to avoid floating point drift.
-- Results are cached via CDN (Cache-Control) and Workers Cache API. TTL = CACHE_TTL_SECONDS.
-- Optional API key: send header `x-api-key` matching `API_KEYS` (comma-separated) if configured.
-- CORS allowlist: set `ORIGINS_ALLOWLIST` to a comma-separated list like `https://app.example.com,https://staging.example.com`.
-- Basic per-IP rate limit: `RATE_LIMIT_PER_MIN` (default 60).
+## Notes
 
-Secrets/config:
-```
+- Always returns the amount for exactly $1 USD (frontend multiplies for custom fees)
+- Results are cached via Cloudflare CDN with TTL = `CACHE_TTL_SECONDS` (default 3600s)
+- Rate limited to `RATE_LIMIT_PER_MIN` requests per IP (default 60)
+- CORS enabled for allowed origins via `ORIGINS_ALLOWLIST` environment variable
+
+## Environment Variables
+
+- `COINDESK_PROXY_KEY`: API key for CryptoCompare (required for coindesk provider)
+- `ORIGINS_ALLOWLIST`: Comma-separated allowed origins (e.g., `https://akashi-notari.com`)
+- `API_KEYS`: Optional comma-separated API keys for authentication
+- `CACHE_TTL_SECONDS`: Cache duration in seconds (default: 3600)
+- `RATE_LIMIT_PER_MIN`: Rate limit per IP (default: 60)
+
+## Local Development
+
+```bash
 cd workers/price-feed
-npx wrangler secret put API_KEYS
-```
-
-Local dev:
-```
-pnpm i # or npm i
+pnpm install
 pnpm dev
 ```
 
-Example curl (local):
-```
-curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453"
-```
-
-With explicit provider:
-```
-curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453&provider=coingecko"
+Test locally:
+```bash
+curl "http://127.0.0.1:8787/api/usd-to-amount?ticker=ETH"
+curl "http://127.0.0.1:8787/api/usd-to-amount?ticker=ETH&provider=coingecko"
 ```
 
-Strict mode example (no fallback):
-```
-curl "http://127.0.0.1:8787/api/usd-to-amount?usd=1&chainId=8453&provider=coingecko&strict=1"
+## Deployment
+
+```bash
+# Configure secrets
+npx wrangler secret put COINDESK_PROXY_KEY
+npx wrangler secret put API_KEYS  # optional
+npx wrangler secret put ORIGINS_ALLOWLIST
+
+# Deploy to production
+npx wrangler deploy
 ```
 
-Production examples:
-```
+## Production Usage
+
+```bash
 # Health check
 curl "https://price-feed.akashi-notari.com/health"
 
-# Get ETH amount for $1 on Base (chain 8453)
-curl "https://price-feed.akashi-notari.com/api/usd-to-amount?usd=1&chainId=8453"
+# Get ETH price (for Ethereum, Base, Optimism)
+curl "https://price-feed.akashi-notari.com/api/usd-to-amount?ticker=ETH"
 
-# Use CoinGecko provider
-curl "https://price-feed.akashi-notari.com/api/usd-to-amount?usd=1&chainId=8453&provider=coingecko"
+# Use specific provider
+curl "https://price-feed.akashi-notari.com/api/usd-to-amount?ticker=ETH&provider=coingecko"
 
 # Strict mode (no fallback)
-curl "https://price-feed.akashi-notari.com/api/usd-to-amount?usd=1&chainId=8453&provider=coindesk&strict=1"
-
+curl "https://price-feed.akashi-notari.com/api/usd-to-amount?ticker=ETH&provider=coindesk&strict=1"
 ```
-
-Cycle-through test script:
-```
-pnpm test:local
-# or
-BASE=https://your-prod-host pnpm test:prod
-```
-The script reads env vars: `BASE` (default http://127.0.0.1:8787), `USD` (default 1), `API_KEY` (optional), `TIMEOUT_MS` (default 8000). It calls `/health` then checks all supported chains with both providers using `strict=1`.
