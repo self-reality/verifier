@@ -7,6 +7,9 @@ Overview
 Structure
 - `registry/contracts/VerifierRegistry.sol`: Core registry contract.
 - `registry/scripts/deploy.js`: Deployment script.
+- `registry/scripts/manage.js`: Management script for updating fees and ownership.
+- `registry/scripts/verify.js`: Verification script for block explorers.
+- `registry/scripts/config.json`: Source configuration for deployments and management.
 - `registry/test/VerifierRegistry.t.js`: Test suite.
 - `registry/constants.json`: Last deployed addresses by network.
 - `registry/hardhat.config.js`: Hardhat configuration.
@@ -14,7 +17,6 @@ Structure
 Requirements
 - Node.js 18+
 - pnpm or npm
-- Foundry (optional) if you prefer, but project is Hardhat-based
 
 Getting Started
 ```
@@ -37,9 +39,9 @@ Local Node (optional)
 pnpm hardhat node
 ```
 
-Deploy
+## Deploy
 
-## Prerequisites
+### Prerequisites
 1. Install dependencies:
 ```bash
 cd contracts/registry
@@ -76,47 +78,17 @@ The deployment will use the first address (index 0) derived from the mnemonic.
 
 4. Ensure your deployer address has sufficient funds on the target network.
 
-## Deploy to a Network
+### Network Configuration
 
-### Testnet Deploy (Base Sepolia)
-```bash
-pnpm hardhat run scripts/deploy.js --network baseSepolia
-```
-
-### Mainnet Deploy
-```bash
-# Base Mainnet
-pnpm hardhat run scripts/deploy.js --network base
-
-# Polygon
-pnpm hardhat run scripts/deploy.js --network polygon
-
-# Arbitrum
-pnpm hardhat run scripts/deploy.js --network arbitrum
-
-# Optimism
-pnpm hardhat run scripts/deploy.js --network optimism
-
-# Ethereum Mainnet
-pnpm hardhat run scripts/deploy.js --network mainnet
-```
-
-The deployment script will:
-- Verify your deployer address has funds
-- Read fee configuration from `scripts/config.json`
-- Deploy the VerifierRegistry contract
-- Update `registry/constants.json` with the deployed address and configuration
-
-## Network Configuration
-
-Before deploying to a network, ensure it's configured in `scripts/config.json`. The file should contain fee settings for each network:
+Before deploying, ensure the network is configured in `scripts/config.json`. Network names should match the network names in `hardhat.config.js` (lowercase).
 
 ```json
 {
   "base": {
     "config": {
       "minFee": "0",
-      "maxFee": "0"
+      "maxFee": "0",
+      "owner": "0x0000000000000000000000000000000000000000"
     }
   },
   "polygon": {
@@ -128,21 +100,70 @@ Before deploying to a network, ensure it's configured in `scripts/config.json`. 
 }
 ```
 
-Network names should match the network names in `hardhat.config.js` (lowercase).
+### Deploy to a Network
 
-## After Deployment
+Testnet (Base Sepolia):
+```bash
+pnpm hardhat run scripts/deploy.js --network baseSepolia
+```
+
+Mainnet (Base):
+```bash
+pnpm hardhat run scripts/deploy.js --network base
+```
+
+### After Deployment
 
 After deployment completes:
 1. The deployed contract address will be printed to the console
 2. `constants.json` will be updated with deployment details
 3. Share the `constants.json` file with your frontend and worker services
-4. Consider verifying the contract on the block explorer (e.g., Basescan, Etherscan)
 
-Notes
-- Use `constants.json` as the single source of truth for frontends and workers.
-- Review `hardhat.config.js` for configured networks and compiler settings.
-- For reproducible installs, prefer `pnpm` as used across the repo.
+## Managing Contract Parameters
 
+After deployment, update contract parameters (fees and owner) using the `manage.js` script:
+
+```bash
+npx hardhat run scripts/manage.js --network <network-name>
+```
+
+This script will:
+1. Read the desired configuration from `config.json` for the selected network
+2. Connect to the deployed contract and read current values
+3. Show a comparison of current vs desired values
+4. Ask for confirmation before making any changes
+5. Update fees and/or transfer ownership if confirmed
+6. Update `constants.json` with the new configuration
+
+**Note:** Ensure you have `DEPLOYER_KEY` or `MNEMONIC_FILE_PATH` set in your `.env` file, and that the deployer account is the current owner of the contract.
+
+## Verification
+
+After deployment, verify your contract on block explorers:
+
+### 1. Get API Key
+- For Base: Get API key from [Basescan](https://basescan.org/myapikey)
+- For other networks: Get from respective block explorer
+
+### 2. Add API Key to .env
+Add one of these to your `.env` file (both work):
+```bash
+ETHERSCAN_API_KEY=your_api_key_here
+# or
+BASESCAN_API_KEY=your_api_key_here
+```
+Note: Using Etherscan V2 API format (single API key for all networks)
+
+### 3. Run Verification
+```bash
+npm run verify:base
+# or
+npm run verify:sepolia
+# or for other networks:
+npx hardhat run scripts/verify.js --network <network-name>
+```
+
+The verification script automatically reads constructor arguments from `constants.json`.
 
 ## constants.json Schema Example
 
@@ -160,4 +181,9 @@ Notes
   }
 }
 ```
+
+Notes
+- Use `constants.json` as the single source of truth for frontends and workers.
+- Review `hardhat.config.js` for configured networks and compiler settings.
+- For reproducible installs, prefer `pnpm` as used across the repo.
 
