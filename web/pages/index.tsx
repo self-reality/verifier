@@ -426,8 +426,7 @@ export default function Home() {
                       }}
                       style={{ 
                         opacity: isNetworkSupported(chainId) ? 1 : 0.6,
-                        cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'default' : 'pointer',
-                        textDecoration: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'none' : 'underline'
+                        cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'default' : 'pointer'
                       }}
                     >
                       ↓↑ {getNetworkName(chainId)}
