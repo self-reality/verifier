@@ -46,7 +46,7 @@ export default function Home() {
   // Message states for each section
   const [uploadMessage, setUploadMessage] = useState('');
   const [verifyMessage, setVerifyMessage] = useState('');
-  const [downloadMessage, setDownloadMessage] = useState('[ INFO ]: PDF generation typically takes a few seconds');
+  const [downloadMessage, setDownloadMessage] = useState('');
   
   // Network validation state
   const [showNetworkSelector, setShowNetworkSelector] = useState(false);
@@ -183,6 +183,43 @@ export default function Home() {
     }
   }, [txHash, isTxPending, isTxConfirming, isTxConfirmed, chainId]);
 
+  // Auto-download PDF when transaction is minted
+  useEffect(() => {
+    const generatePdf = async () => {
+      if (!walletAddress || !chainId || !txHash || !feeAmountWei || !fileHash) {
+        return;
+      }
+
+      try {
+        setPdfProgress(1);
+        
+        await generateCertificatePDF(
+          {
+            filename: editedFilename || filename,
+            sha256Hash: fileHash,
+            walletAddress: walletAddress,
+            timestamp: currentTime,
+            chainId: chainId,
+            transactionHash: txHash,
+            feeAmountWei: feeAmountWei,
+            feeCurrencyTicker: feeCurrencyTicker,
+          },
+          (progress) => setPdfProgress(progress)
+        );
+        
+        setDownloadClicked(true);
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        setDownloadMessage('[ ERROR !!! ]: Failed to generate PDF certificate');
+        setPdfProgress(0);
+      }
+    };
+
+    if (isTxConfirmed && !downloadClicked) {
+      generatePdf();
+    }
+  }, [isTxConfirmed, downloadClicked, walletAddress, chainId, txHash, feeAmountWei, fileHash, editedFilename, filename, currentTime, feeCurrencyTicker]);
+
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
     const originalName = selectedFile.name;
@@ -275,7 +312,7 @@ export default function Home() {
     setShowResetConfirmOverlay(false);
     setUploadMessage('');
     setVerifyMessage('');
-    setDownloadMessage('[ INFO ]: PDF generation typically takes a few seconds');
+    setDownloadMessage('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -693,17 +730,9 @@ export default function Home() {
                 )}
               </div>
 
-              <div className="text-xs" style={{ marginBottom: pdfProgress > 0 ? '15px' : '0' }}>
+              <div className="text-xs">
                 ADDITIONALLY: ALL OF THE ON-CHAIN DATA FROM ANCHOR SECTION ABOVE, TRANSACTION URL QR, VERIFICATION INSTRUCTIONS, LEGAL INFO.
               </div>
-
-              {pdfProgress > 0 && (
-                <div>
-                  <div className="text-xs" style={{ marginBottom: '5px' }}>PDF GENERATION PROGRESS</div>
-                  <div className="progress-bar">{renderProgressBar(pdfProgress)}</div>
-                  <div className="text-xs" style={{ marginTop: '5px' }}>{pdfProgress}%</div>
-                </div>
-              )}
             </div>
 
             {/* Download Section */}

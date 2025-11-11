@@ -81,6 +81,10 @@ export async function generateCertificatePDF(
 
     // ========== HEADER ==========
     doc.setFontSize(12);
+    // // doc.text('証', leftMargin, y);
+    // y += lineHeight;
+    doc.text('Akashi Notari', leftMargin, y);
+    y += lineHeight;
     doc.text('PROOF OF EXISTENCE CERTIFICATE', leftMargin, y);
     y += lineHeight;
     drawBorder(y, y + 1);
@@ -132,8 +136,6 @@ export async function generateCertificatePDF(
     
     const networkName = getNetworkName(data.chainId);
     doc.text(`Network:     ${networkName}`, leftMargin, y);
-    y += lineHeight;
-    doc.text(`Chain ID:    ${data.chainId}`, leftMargin, y);
     y += lineHeight + 2;
     
     doc.text('Transaction Hash:', leftMargin, y);
@@ -141,11 +143,7 @@ export async function generateCertificatePDF(
     y = addWrappedText(`  ${data.transactionHash}`, y, 2);
     y += 2;
     
-    const feeInNative = (Number(data.feeAmountWei) / 1e18).toFixed(6);
-    doc.text(`Fee:         ${feeInNative} ${data.feeCurrencyTicker} ($0.01)`, leftMargin, y);
-    y += lineHeight;
-    
-    y += lineHeight;
+    // y += lineHeight;
     doc.text('Event Log URL:', leftMargin, y);
     y += lineHeight;
     y = addWrappedTextWithLink(`  ${eventLogUrl}`, eventLogUrl, y, 2);
@@ -204,6 +202,32 @@ export async function generateCertificatePDF(
       y += lineHeight;
     }
 
+    y += lineHeight;
+    doc.text('HOW TO GET THE HASH OF YOUR FILE:', leftMargin, y);
+    y += lineHeight;
+    drawBorder(y, y + 1);
+    y += lineHeight;
+
+    const hashInstructions = [
+      'Online Tools (free):',
+      '  - https://hash-file.online/',
+      '  - https://hash.online-convert.com/sha256-generator',
+      '  - https://inventivehq.com/tools/hash-generator',
+      '',
+      'macOS / Linux (Terminal):',
+      '  shasum -a 256 filename',
+      '  OR',
+      '  sha256sum filename',
+      '',
+      'Windows (PowerShell):',
+      '  Get-FileHash -Algorithm SHA256 filename',
+    ];
+
+    for (const line of hashInstructions) {
+      doc.text(line, leftMargin, y);
+      y += lineHeight;
+    }
+
     if (onProgress) onProgress(80);
 
     // ========== LEGAL DISCLAIMER ==========
@@ -232,11 +256,15 @@ export async function generateCertificatePDF(
     doc.text(`Certificate generated: ${timestampDate.toUTCString()}`, leftMargin, y);
     y += lineHeight - 1;
     doc.text('Proof of Existence - Your file never left your computer', leftMargin, y);
+    y += lineHeight;
+    const websiteUrl = 'https://akashi-notari.com/';
+    const websiteText = websiteUrl;
+    doc.textWithLink(websiteText, leftMargin, y, { url: websiteUrl });
 
     if (onProgress) onProgress(95);
 
     // Save the PDF or return buffer based on output mode
-    const filename = `proof-of-existence-${data.filename.replace(/[^a-z0-9\-_.]/g, '_')}.pdf`;
+    const filename = data.filename.endsWith('.pdf') ? data.filename : `${data.filename}.pdf`;
 
     if (outputMode === 'buffer') {
       if (onProgress) onProgress(100);
