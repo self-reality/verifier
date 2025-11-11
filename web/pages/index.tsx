@@ -610,36 +610,19 @@ export default function Home() {
 
               <div style={{ marginBottom: '15px' }}>
                 {walletConnected && mounted ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span 
-                      className="text-xs" 
-                      onClick={() => {
-                        if (transactionStatus !== 'sent' && transactionStatus !== 'minted') {
-                          setShowNetworkSelector(true);
-                        }
-                      }}
-                      style={{ 
-                        opacity: isNetworkSupported(chainId) ? 1 : 0.6,
-                        cursor: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'default' : 'pointer',
-                        textDecoration: (transactionStatus === 'sent' || transactionStatus === 'minted') ? 'none' : 'underline'
-                      }}
-                    >
-                      ↓↑ {getNetworkName(chainId)}
-                    </span>
-                    <button
-                      onClick={handleDisconnectWallet}
-                      disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
-                      className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      CONNECTED
-                      <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleDisconnectWallet}
+                    disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
+                    className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    CONNECTED
+                    <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
+                  </button>
                 ) : (
                   <button
                     onClick={handleConnectWallet}
