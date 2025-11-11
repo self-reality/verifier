@@ -15,7 +15,7 @@ Client‑side, ~$1 on‑chain proof‑of‑existence for any file. Your file nev
 ### Value Proposition
 - **Trustless proof:** Immutable on‑chain anchor for the file’s cryptographic fingerprint. Initial chains: 
 Base
-Polygon
+Polygon (later - non ETH fees)
 Arbitrum
 Optimism
 Ethereum 

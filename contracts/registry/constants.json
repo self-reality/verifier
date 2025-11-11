@@ -18,5 +18,15 @@
       "maxFee": "1300000000000000",
       "owner": "0xa88630300706488e9d31597ccC4394206F4D4C6C"
     }
+  },
+  "optimism": {
+    "address": "0x859Fe07D2995875319b7e65592812392B16BBADe",
+    "chainId": 10,
+    "deployedAt": "2025-11-11T06:17:15.050Z",
+    "config": {
+      "minFee": "0",
+      "maxFee": "1400000000000000",
+      "owner": "0xa88630300706488e9d31597ccC4394206F4D4C6C"
+    }
   }
 }

@@ -5,16 +5,10 @@
       "maxFee": "1474000000000000"
     }
   },
-  "polygon": {
-    "config": {
-      "minFee": "0",
-      "maxFee": "28090000000000000000"
-    }
-  },
   "optimism": {
     "config": {
       "minFee": "0",
-      "maxFee": "12300000000000000000"
+      "maxFee": "1400000000000000"
     }
   },
   "mainnet": {
