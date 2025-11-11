@@ -1,7 +1,7 @@
 import { http, createConfig } from 'wagmi';
 import { mainnet, base, optimism } from 'wagmi/chains';
 import { QueryClient } from '@tanstack/react-query';
-import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
+import { injected, walletConnect } from 'wagmi/connectors';
 
 // Get Alchemy API key from environment
 const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_KEY || '';
@@ -21,9 +21,6 @@ if (!projectId) {
 // Build connectors array
 const connectors = [
   injected(),
-  coinbaseWallet({
-    appName: 'Proof of Existence',
-  }),
   walletConnect({
     projectId,
     metadata: {
