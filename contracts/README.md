@@ -82,6 +82,8 @@ The deployment will use the first address (index 0) derived from the mnemonic.
 
 Before deploying, ensure the network is configured in `scripts/config.json`. Network names should match the network names in `hardhat.config.js` (lowercase).
 
+Initally was set to 0 to $5 for each chain.
+
 ```json
 {
   "base": {

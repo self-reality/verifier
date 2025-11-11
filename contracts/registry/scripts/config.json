@@ -1,10 +1,4 @@
 {
-  "basesepolia": {
-    "config": {
-      "minFee": "0",
-      "maxFee": "0"
-    }
-  },
   "base": {
     "config": {
       "minFee": "0",
@@ -13,26 +7,20 @@
   },
   "polygon": {
     "config": {
-      "minFee": "2500000000000",
-      "maxFee": "1300000000000000"
-    }
-  },
-  "arbitrum": {
-    "config": {
-      "minFee": "2500000000000",
-      "maxFee": "1300000000000000"
+      "minFee": "0",
+      "maxFee": "28090000000000000000"
     }
   },
   "optimism": {
     "config": {
-      "minFee": "2500000000000",
-      "maxFee": "1300000000000000"
+      "minFee": "0",
+      "maxFee": "12300000000000000000"
     }
   },
   "mainnet": {
     "config": {
-      "minFee": "2500000000000",
-      "maxFee": "1300000000000000"
+      "minFee": "0",
+      "maxFee": "1400000000000000"
     }
   }
 }
