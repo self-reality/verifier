@@ -346,12 +346,6 @@ export default function Home() {
       return;
     }
     
-    // Validate contract address is not zero address
-    if (contract.address === '0x0000000000000000000000000000000000000000') {
-      setVerifyMessage('[ ERROR !!! ]: Contract not deployed on this network yet. Please use a different network.');
-      return;
-    }
-    
     // Call the contract
     try {
       writeContract({

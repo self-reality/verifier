@@ -5,21 +5,18 @@ import constants from '../../contracts/registry/constants.json';
 export const BASE_CHAIN_ID = 8453;
 export const ETHEREUM_CHAIN_ID = 1;
 export const OPTIMISM_CHAIN_ID = 10;
-export const POLYGON_CHAIN_ID = 137;
 
 export const SUPPORTED_CHAIN_IDS = [
   BASE_CHAIN_ID,
   ETHEREUM_CHAIN_ID,
   OPTIMISM_CHAIN_ID,
-  POLYGON_CHAIN_ID,
 ] as const;
 
 // Contract addresses by chain ID
 export const CONTRACT_ADDRESSES: Record<number, `0x${string}`> = {
   [BASE_CHAIN_ID]: constants.base.address as `0x${string}`,
-  [ETHEREUM_CHAIN_ID]: '0x0000000000000000000000000000000000000000',
-  [OPTIMISM_CHAIN_ID]: '0x0000000000000000000000000000000000000000',
-  [POLYGON_CHAIN_ID]: '0x0000000000000000000000000000000000000000',
+  [ETHEREUM_CHAIN_ID]: constants.mainnet.address as `0x${string}`,
+  [OPTIMISM_CHAIN_ID]: constants.optimism.address as `0x${string}`,
 };
 
 // Contract ABI (same for all chains)
@@ -41,11 +38,3 @@ export function getVerifierRegistryContract(chainId: number) {
     abi: VERIFIER_REGISTRY_ABI,
   } as const;
 }
-
-// Backward compatibility: Default to Base chain
-export const VERIFIER_REGISTRY_ADDRESS = constants.base.address as `0x${string}`;
-export const verifierRegistryContract = {
-  address: VERIFIER_REGISTRY_ADDRESS,
-  abi: VERIFIER_REGISTRY_ABI,
-} as const;
-
