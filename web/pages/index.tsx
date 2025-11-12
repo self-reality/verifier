@@ -31,14 +31,12 @@ export default function Home() {
   const [hashProgress, setHashProgress] = useState(0);
   const [filename, setFilename] = useState('');
   const [editedFilename, setEditedFilename] = useState('');
-  const [showEditOverlay, setShowEditOverlay] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [fileHash, setFileHash] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [downloadClicked, setDownloadClicked] = useState(false);
   const [showResetConfirmOverlay, setShowResetConfirmOverlay] = useState(false);
   const [showConnectorSelection, setShowConnectorSelection] = useState(false);
-  const [filenameEditWarning, setFilenameEditWarning] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -558,17 +556,6 @@ export default function Home() {
               <div style={{ marginBottom: '10px' }}>
                 <span className="text-xs">FILENAME: </span>
                 <span className="text-xs">{editedFilename || filename}</span>
-                <button
-                  onClick={() => setShowEditOverlay(true)}
-                  disabled={!isUploaded || transactionStatus === 'sent' || transactionStatus === 'minted'}
-                  className={`btn ${(isUploaded && transactionStatus !== 'sent' && transactionStatus !== 'minted') ? '' : 'btn-disabled'}`}
-                  style={{
-                    padding: '4px 8px',
-                    marginLeft: '10px'
-                  }}
-                >
-                  EDIT
-                </button>
               </div>
 
               <div style={{ marginBottom: '10px' }}>
@@ -606,31 +593,6 @@ export default function Home() {
               <h3 className="subsection-title">
                 VERIFY ON CHAIN
               </h3>
-
-              <div style={{ marginBottom: '15px' }}>
-                {walletConnected && mounted ? (
-                  <button
-                    onClick={handleDisconnectWallet}
-                    disabled={transactionStatus === 'sent' || transactionStatus === 'minted'}
-                    className={`btn ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    CONNECTED
-                    <span className={`btn-x-inline ${(transactionStatus === 'sent' || transactionStatus === 'minted') ? 'btn-disabled' : ''}`}>X</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleConnectWallet}
-                    className="btn"
-                  >
-                    CONNECT WALLET
-                  </button>
-                )}
-              </div>
 
               <div className="text-xs" style={{ marginBottom: '15px' }}>
                 STATUS: <span className={transactionStatus === 'sent' || transactionStatus === 'minted' ? '' : 'text-disabled'}>TRANSACTION SENT</span> | <span className={transactionStatus === 'minted' ? '' : 'text-disabled'}>TRANSACTION MINED</span>
@@ -783,65 +745,6 @@ export default function Home() {
           )}
 
         </section>
-
-        {/* Edit Filename Overlay */}
-        {showEditOverlay && (
-          <div className="overlay">
-            <div className="overlay-content">
-              <h3 className="subsection-title">
-                EDIT FILENAME
-              </h3>
-              <input
-                type="text"
-                value={editedFilename}
-                onChange={(e) => {
-                  const input = e.target.value;
-                  const validation = validateFilename(input);
-                  setEditedFilename(validation.sanitized);
-                  if (validation.warnings.length > 0) {
-                    setFilenameEditWarning(validation.warnings.join(', '));
-                  } else {
-                    setFilenameEditWarning('');
-                  }
-                }}
-                className="input-text"
-                style={{ marginBottom: '10px' }}
-              />
-              {filenameEditWarning && (
-                <div className="text-xs" style={{ 
-                  marginBottom: '15px',
-                  color: 'var(--color-accent)',
-                  opacity: 0.7
-                }}>
-                  {filenameEditWarning}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => {
-                    setEditedFilename(filename);
-                    setFilenameEditWarning('');
-                    setShowEditOverlay(false);
-                  }}
-                  className="btn btn-large"
-                  style={{ flex: 1 }}
-                >
-                  CANCEL
-                </button>
-                <button
-                  onClick={() => {
-                    setFilenameEditWarning('');
-                    setShowEditOverlay(false);
-                  }}
-                  className="btn btn-large"
-                  style={{ flex: 1 }}
-                >
-                  SAVE
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Connector Selection Overlay */}
         {showConnectorSelection && (
