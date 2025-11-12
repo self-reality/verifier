@@ -1,2 +1,4 @@
-/certificate/*   /certificate   200
+/certificate   /certificate/index.html   200!
+/certificate/  /certificate/index.html   200!
+/certificate/* /certificate/index.html   200!
 

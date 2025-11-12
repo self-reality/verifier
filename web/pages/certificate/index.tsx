@@ -3,8 +3,17 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { parseTransactionUrl, validateTxHash, getNetworkName } from '../../utils';
 import { generateCertificatePDF } from '../../utils/pdfGenerator';
-import { getContractAddress, BASE_CHAIN_ID, ETHEREUM_CHAIN_ID, OPTIMISM_CHAIN_ID } from '../../constants/contracts';
-import { fetchTransactionReceipt, decodeAnchoredEvent, type AnchoredEventData } from '../../utils/txParser';
+import {
+  getContractAddress,
+  BASE_CHAIN_ID,
+  ETHEREUM_CHAIN_ID,
+  OPTIMISM_CHAIN_ID,
+} from '../../constants/contracts';
+import {
+  fetchTransactionReceipt,
+  decodeAnchoredEvent,
+  type AnchoredEventData,
+} from '../../utils/txParser';
 
 type ChainName = 'base' | 'ethereum' | 'optimism';
 
@@ -43,7 +52,7 @@ const normalizeChain = (value: string | null): ChainName | null => {
 
 export default function CertificatePage() {
   const router = useRouter();
-  const lastProcessedPathRef = useRef<string | null>(null);
+  const lastFetchedKeyRef = useRef<string | null>(null);
 
   const [inputValue, setInputValue] = useState('');
   const [selectedChain, setSelectedChain] = useState<ChainName>('base');
@@ -94,7 +103,9 @@ export default function CertificatePage() {
         const eventData = decodeAnchoredEvent(receipt, contractAddress);
 
         if (!eventData) {
-          throw new Error('This transaction does not contain a valid Anchored event from the VerifierRegistry contract.');
+          throw new Error(
+            'This transaction does not contain a valid Anchored event from the VerifierRegistry contract.'
+          );
         }
 
         setRegistrationData({
@@ -102,14 +113,44 @@ export default function CertificatePage() {
           blockNumber: receipt.blockNumber,
           txHash: receipt.transactionHash,
         });
+
+        const key = `${chainName}:${txHash.toLowerCase()}`;
+        lastFetchedKeyRef.current = key;
+
+        if (router.isReady) {
+          const currentChainParam = normalizeChain(
+            getFirst(router.query.chain) ||
+              getFirst(router.query.chainId) ||
+              getFirst(router.query.network)
+          );
+          const currentHashParam =
+            getFirst(router.query.hash) ||
+            getFirst(router.query.tx) ||
+            getFirst(router.query.txHash);
+
+          if (
+            currentChainParam !== chainName ||
+            (currentHashParam || '').toLowerCase() !== txHash.toLowerCase()
+          ) {
+            router.replace(
+              {
+                pathname: '/certificate',
+                query: { chain: chainName, hash: txHash },
+              },
+              undefined,
+              { shallow: true }
+            );
+          }
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to fetch transaction data');
         console.error('Error fetching transaction:', err);
+        lastFetchedKeyRef.current = null;
       } finally {
         setLoading(false);
       }
     },
-    [inputValue, selectedChain]
+    [inputValue, selectedChain, router]
   );
 
   useEffect(() => {
@@ -123,34 +164,10 @@ export default function CertificatePage() {
       return;
     }
 
-    const currentAsPath = router.asPath;
-    if (lastProcessedPathRef.current === currentAsPath) {
-      return;
-    }
-
-    lastProcessedPathRef.current = currentAsPath;
-
-    const [pathname, searchAndHash] = currentAsPath.split('?');
-    const [search = ''] = (searchAndHash ?? '').split('#');
-    const pathSegments = pathname.split('/').filter(Boolean);
-
-    let chainFromPath: ChainName | null = null;
-    let hashFromPath: string | null = null;
-
-    if (pathSegments[0] === 'certificate') {
-      if (pathSegments.length >= 2 && isValidChain(pathSegments[1])) {
-        chainFromPath = pathSegments[1] as ChainName;
-      }
-
-      if (pathSegments.length >= 3) {
-        const maybeHash = decodeURIComponent(pathSegments[2]);
-        if (validateTxHash(maybeHash)) {
-          hashFromPath = maybeHash;
-        }
-      }
-    }
-
+    const [, searchAndHash = ''] = router.asPath.split('?');
+    const [search = ''] = searchAndHash.split('#');
     const queryParams = new URLSearchParams(search);
+
     const chainFromQuery = normalizeChain(
       getFirst(router.query.chain) ||
         getFirst(router.query.chainId) ||
@@ -168,21 +185,22 @@ export default function CertificatePage() {
       queryParams.get('tx') ||
       queryParams.get('txHash');
 
-    const chainToUse = chainFromQuery || chainFromPath;
-    const hashToUse = hashFromQuery || hashFromPath;
-
-    if (chainToUse && chainToUse !== selectedChain) {
-      setSelectedChain(chainToUse);
+    if (chainFromQuery && chainFromQuery !== selectedChain) {
+      setSelectedChain(chainFromQuery);
     }
 
-    if (hashToUse && hashToUse !== inputValue) {
-      setInputValue(hashToUse);
+    if (hashFromQuery && hashFromQuery !== inputValue) {
+      setInputValue(hashFromQuery);
     }
 
-    if (chainToUse && hashToUse && validateTxHash(hashToUse)) {
-      handleFetch(hashToUse, chainToUse);
+    if (chainFromQuery && hashFromQuery && validateTxHash(hashFromQuery)) {
+      const key = `${chainFromQuery}:${hashFromQuery.toLowerCase()}`;
+      if (lastFetchedKeyRef.current !== key) {
+        lastFetchedKeyRef.current = key;
+        handleFetch(hashFromQuery, chainFromQuery);
+      }
     }
-  }, [router.isReady, router.asPath, router.query, handleFetch, inputValue, selectedChain]);
+  }, [router.isReady, router.asPath, router.query, handleFetch, selectedChain, inputValue]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.trim();
@@ -480,9 +498,9 @@ export default function CertificatePage() {
           >
             <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.25rem' }}>Example URLs</h3>
             <div style={{ fontSize: '0.875rem', lineHeight: '1.8', opacity: 0.8 }}>
+              <p style={{ margin: '0.5rem 0' }}>• https://akashi-notari.com/certificate?chain=base&hash=0x575e3899...</p>
               <p style={{ margin: '0.5rem 0' }}>• https://basescan.org/tx/0x575e3899...</p>
               <p style={{ margin: '0.5rem 0' }}>• https://basescan.org/tx/0x575e3899...#eventlog</p>
-              <p style={{ margin: '0.5rem 0' }}>• https://etherscan.io/tx/0x123...</p>
               <p style={{ margin: '0.5rem 0' }}>• 0x575e3899b2697043acd5719cd1ca376794b2a62a92f18334c3ce04d85ebe8b0b</p>
             </div>
           </div>
