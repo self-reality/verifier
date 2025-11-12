@@ -15,7 +15,7 @@ export default function Home() {
   const { connectors, connect, error: connectError, reset: resetConnect } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
-  const { data: txHash, writeContract, error: writeError, isPending: isTxPending } = useWriteContract();
+  const { data: txHash, writeContract, error: writeError, isPending: isTxPending, reset: resetWriteContract } = useWriteContract();
   const { isLoading: isTxConfirming, isSuccess: isTxConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
   });
@@ -283,6 +283,8 @@ export default function Home() {
     setUploadMessage('');
     setVerifyMessage('');
     setDownloadMessage('');
+    // Reset transaction state
+    resetWriteContract();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
