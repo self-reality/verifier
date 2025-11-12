@@ -47,21 +47,27 @@ export const VerifierRegistryABI = [
     "inputs": [
       {
         "indexed": true,
-        "internalType": "address",
-        "name": "submitter",
-        "type": "address"
+        "internalType": "string",
+        "name": "cidIndex",
+        "type": "string"
       },
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "string",
         "name": "cid",
         "type": "string"
       },
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "string",
         "name": "filename",
         "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "submitter",
+        "type": "address"
       },
       {
         "indexed": false,
@@ -77,6 +83,43 @@ export const VerifierRegistryABI = [
       }
     ],
     "name": "Anchored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "hashIndex",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes32",
+        "name": "hash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "submitter",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "paid",
+        "type": "uint256"
+      }
+    ],
+    "name": "AnchoredBytes32",
     "type": "event"
   },
   {
@@ -112,6 +155,32 @@ export const VerifierRegistryABI = [
       }
     ],
     "name": "anchor",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "hash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "anchorBytes32",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "cid",
+        "type": "string"
+      }
+    ],
+    "name": "anchorCidOnly",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
