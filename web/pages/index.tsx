@@ -191,39 +191,6 @@ export default function Home() {
     }
   }, [txHash, isTxPending, isTxConfirming, isTxConfirmed, chainId]);
 
-  // Auto-download PDF when transaction is minted
-  useEffect(() => {
-    const generatePdf = async () => {
-      if (!walletAddress || !chainId || !txHash || !feeAmountWei || !fileHash) {
-        return;
-      }
-
-      try {
-        await generateCertificatePDF(
-          {
-            filename: editedFilename || filename,
-            sha256Hash: fileHash,
-            walletAddress: walletAddress,
-            timestamp: currentTime,
-            chainId: chainId,
-            transactionHash: txHash,
-            feeAmountWei: feeAmountWei,
-            feeCurrencyTicker: feeCurrencyTicker,
-          }
-        );
-        
-        setDownloadClicked(true);
-      } catch (error) {
-        console.error('PDF generation error:', error);
-        setDownloadMessage('[ ERROR !!! ]: Failed to generate PDF certificate');
-      }
-    };
-
-    if (isTxConfirmed && !downloadClicked) {
-      generatePdf();
-    }
-  }, [isTxConfirmed, downloadClicked, walletAddress, chainId, txHash, feeAmountWei, fileHash, editedFilename, filename, currentTime, feeCurrencyTicker]);
-
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
     const originalName = selectedFile.name;
