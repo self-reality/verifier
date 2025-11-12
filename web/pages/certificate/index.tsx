@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import Head from 'next/head';
-import { parseTransactionUrl, validateTxHash, getNetworkName } from '../../utils';
+import { parseTransactionUrl, validateTxHash, getNetworkName, getTxUrl } from '../../utils';
 import { generateCertificatePDF } from '../../utils/pdfGenerator';
 import {
   getContractAddress,
@@ -224,12 +225,10 @@ export default function CertificatePage() {
     try {
       setLoading(true);
       await generateCertificatePDF({
-        cid: registrationData.cid,
         filename: registrationData.filename,
         sha256Hash: registrationData.cid,
         walletAddress: registrationData.submitter,
         timestamp: Number(registrationData.timestamp) * 1000,
-        blockNumber: Number(registrationData.blockNumber),
         chainId: CHAIN_NAME_TO_ID[selectedChain],
         transactionHash: registrationData.txHash,
         feeAmountWei: registrationData.paid,
@@ -249,6 +248,11 @@ export default function CertificatePage() {
     return null;
   }
 
+  const fetchButtonDisabled = loading || !inputValue;
+  const selectedChainId = CHAIN_NAME_TO_ID[selectedChain];
+  const transactionUrl =
+    registrationData?.txHash ? getTxUrl(selectedChainId, registrationData.txHash) : null;
+
   return (
     <>
       <Head>
@@ -257,255 +261,169 @@ export default function CertificatePage() {
           name="description"
           content="Generate a proof of existence certificate from a blockchain transaction"
         />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+          rel="stylesheet"
+        />
       </Head>
 
-      <div
-        style={{
-          minHeight: '100vh',
-          backgroundColor: '#000',
-          color: '#00ff00',
-          fontFamily: 'Courier, monospace',
-          padding: '2rem 1rem',
-        }}
-      >
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>証 Akashi Notari</h1>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Generate Certificate</h2>
-            <p style={{ fontSize: '1rem', opacity: 0.8 }}>
-              Enter a transaction hash or block explorer URL to generate a proof of existence certificate
-            </p>
+      <div className="pixel-page certificate-page">
+        <header className="pixel-header">
+          <div className="header-row">
+            <div className="header-left">
+              <div className="logo">証</div>
+              <span className="text-md">Akashi Notari | Simple Proof of Existence</span>
+            </div>
+            <div className="header-right">
+              <Link href="/" className="btn">
+                HOME
+              </Link>
+            </div>
           </div>
-
-          <div
-            style={{
-              border: '2px solid #00ff00',
-              padding: '2rem',
-              marginBottom: '2rem',
-            }}
-          >
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                Chain:
-              </label>
-              <select
-                value={selectedChain}
-                onChange={(e) => setSelectedChain(e.target.value as ChainName)}
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: '#000',
-                  color: '#00ff00',
-                  border: '1px solid #00ff00',
-                  fontFamily: 'Courier, monospace',
-                  fontSize: '1rem',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <option value="base">Base</option>
-                <option value="ethereum">Ethereum</option>
-                <option value="optimism">Optimism</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-                Transaction Hash or Block Explorer URL:
-              </label>
-              <input
-                type="text"
-                value={inputValue}
-                onChange={handleInputChange}
-                placeholder="0x... or https://basescan.org/tx/0x..."
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  backgroundColor: '#000',
-                  color: '#00ff00',
-                  border: '1px solid #00ff00',
-                  fontFamily: 'Courier, monospace',
-                  fontSize: '1rem',
-                  boxSizing: 'border-box',
-                }}
-              />
-              <p style={{ fontSize: '0.875rem', marginTop: '0.5rem', opacity: 0.7 }}>
-                You can paste a transaction hash or a full block explorer URL
-              </p>
-            </div>
-
-            <button
-              onClick={() => handleFetch()}
-              disabled={loading || !inputValue}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: loading || !inputValue ? '#003300' : '#00ff00',
-                color: loading || !inputValue ? '#006600' : '#000',
-                border: 'none',
-                fontFamily: 'Courier, monospace',
-                fontSize: '1rem',
-                fontWeight: 'bold',
-                cursor: loading || !inputValue ? 'not-allowed' : 'pointer',
-                transition: 'background-color 0.2s',
-              }}
-              onMouseOver={(e) => {
-                if (!loading && inputValue) {
-                  e.currentTarget.style.backgroundColor = '#00cc00';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!loading && inputValue) {
-                  e.currentTarget.style.backgroundColor = '#00ff00';
-                }
-              }}
-            >
-              {loading ? 'Loading...' : 'Fetch Transaction Data'}
-            </button>
+          <div className="text-xs">
+            VERIFY AND TIMESTAMP ANY FILE FOR JUST $1. YOUR PROOF NEVER LEAVES BLOCKCHAIN.
           </div>
+        </header>
 
-          {error && (
-            <div
-              style={{
-                border: '2px solid #ff0000',
-                padding: '1rem',
-                marginBottom: '2rem',
-                backgroundColor: '#330000',
-              }}
-            >
-              <p style={{ margin: 0, color: '#ff6666' }}>{error}</p>
-            </div>
-          )}
+        <main className="certificate-main">
+          <section className="certificate-section">
+            <h2 className="section-title">1. LOOK UP TRANSACTION</h2>
+            <div className="pixel-box">
+              <div className="form-field">
+                <label className="pixel-label" htmlFor="certificate-chain">
+                  Chain
+                </label>
+                <select
+                  id="certificate-chain"
+                  value={selectedChain}
+                  onChange={(e) => setSelectedChain(e.target.value as ChainName)}
+                  disabled={loading}
+                  className="input-select"
+                >
+                  <option value="base">Base</option>
+                  <option value="ethereum">Ethereum</option>
+                  <option value="optimism">Optimism</option>
+                </select>
+              </div>
 
-          {registrationData && !error && (
-            <div
-              style={{
-                border: '2px solid #00ff00',
-                padding: '2rem',
-                marginBottom: '2rem',
-                backgroundColor: '#001100',
-              }}
-            >
-              <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.25rem' }}>
-                Document Registration Found
-              </h3>
-              <div style={{ fontSize: '0.875rem', lineHeight: '1.8' }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '140px 1fr',
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <span style={{ fontWeight: 'bold' }}>Filename:</span>
-                  <span style={{ wordBreak: 'break-all' }}>{registrationData.filename || '(no filename)'}</span>
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '140px 1fr',
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <span style={{ fontWeight: 'bold' }}>Hash:</span>
-                  <span style={{ wordBreak: 'break-all', fontSize: '0.75rem' }}>{registrationData.cid}</span>
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '140px 1fr',
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <span style={{ fontWeight: 'bold' }}>Submitter:</span>
-                  <span style={{ wordBreak: 'break-all', fontSize: '0.75rem' }}>{registrationData.submitter}</span>
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '140px 1fr',
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <span style={{ fontWeight: 'bold' }}>Timestamp:</span>
-                  <span>{new Date(Number(registrationData.timestamp) * 1000).toLocaleString()}</span>
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '140px 1fr',
-                    gap: '0.5rem',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <span style={{ fontWeight: 'bold' }}>Block:</span>
-                  <span>#{registrationData.blockNumber.toString()}</span>
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '140px 1fr',
-                    gap: '0.5rem',
-                  }}
-                >
-                  <span style={{ fontWeight: 'bold' }}>Chain:</span>
-                  <span>{getNetworkName(CHAIN_NAME_TO_ID[selectedChain])}</span>
-                </div>
+              <div className="form-field">
+                <label className="pixel-label" htmlFor="certificate-hash">
+                  Transaction Hash or Block Explorer URL
+                </label>
+                <input
+                  id="certificate-hash"
+                  type="text"
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  placeholder="0x... or https://basescan.org/tx/0x..."
+                  disabled={loading}
+                  className="pixel-input"
+                />
+                <p className="field-hint text-xs">
+                  You can paste a transaction hash or a full block explorer URL.
+                </p>
               </div>
 
               <button
-                onClick={handleGeneratePDF}
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  marginTop: '1.5rem',
-                  backgroundColor: loading ? '#003300' : '#00ff00',
-                  color: loading ? '#006600' : '#000',
-                  border: 'none',
-                  fontFamily: 'Courier, monospace',
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'background-color 0.2s',
-                }}
-                onMouseOver={(e) => {
-                  if (!loading) {
-                    e.currentTarget.style.backgroundColor = '#00cc00';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!loading) {
-                    e.currentTarget.style.backgroundColor = '#00ff00';
-                  }
-                }}
+                onClick={() => handleFetch()}
+                disabled={fetchButtonDisabled}
+                className={`btn btn-large btn-full-width ${fetchButtonDisabled ? 'btn-disabled' : ''}`}
               >
-                {pdfReady ? '✓ Download Certificate' : 'Generate & Download Certificate'}
+                {loading ? 'Loading...' : 'Fetch Transaction Data'}
               </button>
             </div>
+
+            {error && (
+              <div className="message-box message-box-error">
+                {error}
+              </div>
+            )}
+          </section>
+
+          {registrationData && !error && (
+            <section className="certificate-section">
+              <h2 className="section-title">2. REGISTRATION DETAILS</h2>
+              <div className="pixel-box">
+                <div className="info-grid">
+                  <div className="info-row">
+                    <span className="info-label">Filename</span>
+                    <span className="info-value">
+                      {registrationData.filename || '(no filename)'}
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Hash</span>
+                    <span className="info-value">{registrationData.cid}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Submitter</span>
+                    <span className="info-value">{registrationData.submitter}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Timestamp</span>
+                    <span className="info-value">
+                      {new Date(Number(registrationData.timestamp) * 1000).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Block</span>
+                    <span className="info-value">#{registrationData.blockNumber.toString()}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Chain</span>
+                    <span className="info-value">{getNetworkName(selectedChainId)}</span>
+                  </div>
+                  <div className="info-row">
+                    <span className="info-label">Transaction</span>
+                    <span className="info-value">
+                      {transactionUrl ? (
+                        <a
+                          href={transactionUrl}
+                          className="info-link"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {registrationData.txHash}
+                        </a>
+                      ) : (
+                        registrationData.txHash
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="certificate-actions">
+                  <button
+                    onClick={handleGeneratePDF}
+                    disabled={loading}
+                    className={`btn btn-large btn-full-width ${loading ? 'btn-disabled' : ''}`}
+                  >
+                    {pdfReady ? '✓ Download Certificate' : 'Generate & Download Certificate'}
+                  </button>
+                </div>
+              </div>
+            </section>
           )}
 
-          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-            <a
-              href="/"
-              style={{
-                color: '#00ff00',
-                textDecoration: 'underline',
-                fontSize: '1rem',
-              }}
-            >
+          {!registrationData && !error && (
+            <section className="certificate-section">
+              <div className="pixel-box">
+                <div className="text-xs">
+                  ENTER A TRANSACTION HASH TO LOAD REGISTRATION DETAILS AND DOWNLOAD THE CERTIFICATE.
+                </div>
+              </div>
+            </section>
+          )}
+
+          <div className="certificate-footer">
+            <Link href="/" className="pixel-link">
               ← Back to Home
-            </a>
+            </Link>
           </div>
-        </div>
+        </main>
       </div>
     </>
   );
 }
-
-

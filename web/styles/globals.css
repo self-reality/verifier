@@ -245,3 +245,131 @@ body {
   white-space: pre-line;
 }
 
+.message-box-error {
+  border: var(--border-thick);
+  border-color: #ff4c4c;
+  background-color: #1a0000;
+}
+
+.pixel-page {
+  min-height: 100vh;
+  padding: var(--spacing-xl);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height);
+  box-sizing: border-box;
+}
+
+.certificate-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.certificate-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xl);
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.certificate-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.pixel-label {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.pixel-input,
+.input-select {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: var(--border-thin);
+  background-color: var(--color-bg);
+  color: var(--color-accent);
+  font-family: var(--font-pixel);
+  font-size: var(--font-size-xs);
+  box-sizing: border-box;
+}
+
+.input-select {
+  cursor: pointer;
+}
+
+.input-select:disabled,
+.pixel-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.field-hint {
+  margin: 0;
+  opacity: 0.7;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: var(--spacing-md);
+}
+
+.info-label {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.info-value {
+  font-size: var(--font-size-xs);
+  word-break: break-all;
+}
+
+.info-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.certificate-actions {
+  margin-top: var(--spacing-xl);
+}
+
+.certificate-footer {
+  text-align: center;
+}
+
+.pixel-link {
+  color: var(--color-accent);
+  text-decoration: underline;
+  font-size: var(--font-size-sm);
+}
+
