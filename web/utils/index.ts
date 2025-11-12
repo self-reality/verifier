@@ -1,3 +1,5 @@
+import { BASE_CHAIN_ID, ETHEREUM_CHAIN_ID, OPTIMISM_CHAIN_ID } from '../constants/contracts';
+
 // Price feed configuration
 const PRICE_FEED_URL = process.env.NEXT_PUBLIC_PRICE_FEED_URL || 'https://price-feed.akashi-notari.com';
 
@@ -156,6 +158,35 @@ export const getEventLogUrl = (chainId: number | undefined, txHash: string): str
   const txUrl = getTxUrl(chainId, txHash);
   return txUrl ? `${txUrl}#eventlog` : '';
 };
+
+// Parse transaction URL from block explorers
+export function parseTransactionUrl(input: string): { chainId: number; txHash: string } | null {
+  // If it's already a hash, return null (let user select chain manually)
+  if (input.startsWith('0x') && input.length === 66) {
+    return null;
+  }
+
+  // Block explorer URL patterns
+  const patterns = [
+    { regex: /basescan\.org\/tx\/(0x[a-fA-F0-9]{64})/, chainId: BASE_CHAIN_ID },
+    { regex: /etherscan\.io\/tx\/(0x[a-fA-F0-9]{64})/, chainId: ETHEREUM_CHAIN_ID },
+    { regex: /optimistic\.etherscan\.io\/tx\/(0x[a-fA-F0-9]{64})/, chainId: OPTIMISM_CHAIN_ID },
+  ];
+
+  for (const { regex, chainId } of patterns) {
+    const match = input.match(regex);
+    if (match) {
+      return { chainId, txHash: match[1] };
+    }
+  }
+
+  return null;
+}
+
+// Validate transaction hash format
+export function validateTxHash(hash: string): boolean {
+  return /^0x[a-fA-F0-9]{64}$/.test(hash);
+}
 
 // Compute SHA-256 hash of a file with progress tracking
 export async function computeSHA256(
