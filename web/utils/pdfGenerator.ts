@@ -270,7 +270,21 @@ export async function generateCertificatePDF(
       if (onProgress) onProgress(100);
       return doc.output('arraybuffer') as ArrayBuffer;
     } else {
-      doc.save(filename);
+      const blob = doc.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.target = '_blank';
+      link.rel = 'noopener';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
       if (onProgress) onProgress(100);
     }
   } catch (error) {
