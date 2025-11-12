@@ -4,6 +4,7 @@ import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTran
 import { getVerifierRegistryContract, SUPPORTED_CHAIN_IDS } from '../constants/contracts';
 import { getCurrencyTicker, roundDownWei, fetchPriceFeed, validateFilename, computeSHA256, formatUnixTime, formatHumanTime, renderProgressBar, getNetworkName, getTxUrl, getExplorerDomain } from '../utils';
 import { generateCertificatePDF } from '../utils/pdfGenerator';
+import { AboutOverlay } from '../components/AboutOverlay';
 
 // Fee configuration (in cents, e.g., 100 = $1.00, 1 = $0.01)
 const FEE_CENTS = 1;
@@ -47,6 +48,9 @@ export default function Home() {
   
   // Network validation state
   const [showNetworkSelector, setShowNetworkSelector] = useState(false);
+  
+  // About overlay state
+  const [showAboutOverlay, setShowAboutOverlay] = useState(false);
   
   // Mounted state to prevent hydration mismatch
   const [mounted, setMounted] = useState(false);
@@ -738,6 +742,23 @@ export default function Home() {
               </button>
             </div>
 
+          <div style={{ 
+            textAlign: 'right', 
+            fontSize: 'var(--font-size-xs)', 
+            marginTop: '10px' 
+          }}>
+            <span 
+              onClick={() => setShowAboutOverlay(true)}
+              style={{ 
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                opacity: 0.7
+              }}
+            >
+              ABOUT
+            </span>
+          </div>
+
           {downloadMessage && editedFilename !== 'hide' && (
             <div className="message-box">
               {downloadMessage}
@@ -838,6 +859,11 @@ export default function Home() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* About Overlay */}
+        {showAboutOverlay && (
+          <AboutOverlay onClose={() => setShowAboutOverlay(false)} />
         )}
       </div>
     </>
