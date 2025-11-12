@@ -410,7 +410,7 @@ export default function CertificatePage() {
                     marginBottom: '0.5rem',
                   }}
                 >
-                  <span style={{ fontWeight: 'bold' }}>Hash/CID:</span>
+                  <span style={{ fontWeight: 'bold' }}>Hash:</span>
                   <span style={{ wordBreak: 'break-all', fontSize: '0.75rem' }}>{registrationData.cid}</span>
                 </div>
                 <div
