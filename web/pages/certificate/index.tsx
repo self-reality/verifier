@@ -490,21 +490,6 @@ export default function CertificatePage() {
             </div>
           )}
 
-          <div
-            style={{
-              border: '2px solid #00ff00',
-              padding: '2rem',
-            }}
-          >
-            <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1.25rem' }}>Example URLs</h3>
-            <div style={{ fontSize: '0.875rem', lineHeight: '1.8', opacity: 0.8 }}>
-              <p style={{ margin: '0.5rem 0' }}>• https://akashi-notari.com/certificate?chain=base&hash=0x575e3899...</p>
-              <p style={{ margin: '0.5rem 0' }}>• https://basescan.org/tx/0x575e3899...</p>
-              <p style={{ margin: '0.5rem 0' }}>• https://basescan.org/tx/0x575e3899...#eventlog</p>
-              <p style={{ margin: '0.5rem 0' }}>• 0x575e3899b2697043acd5719cd1ca376794b2a62a92f18334c3ce04d85ebe8b0b</p>
-            </div>
-          </div>
-
           <div style={{ textAlign: 'center', marginTop: '2rem' }}>
             <a
               href="/"
