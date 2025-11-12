@@ -175,6 +175,13 @@ export default function Home() {
     }
   }, [writeError]);
 
+  // Show "requested" message when waiting for wallet approval
+  useEffect(() => {
+    if (isTxPending && !txHash) {
+      setVerifyMessage('[ INFO ]: Transaction requested. Please check your wallet to approve.');
+    }
+  }, [isTxPending, txHash]);
+
   // Show success message when transaction is sent
   useEffect(() => {
     if (txHash && (isTxPending || isTxConfirming) && !isTxConfirmed) {
@@ -618,8 +625,8 @@ export default function Home() {
 
               <button
                 onClick={handleVerifyOnChain}
-                disabled={!isUploaded || !walletConnected || !termsAccepted || transactionStatus === 'minted' || !feeAmountWei || feeLoading}
-                className={`btn btn-large btn-full-width ${isUploaded && walletConnected && termsAccepted && transactionStatus !== 'minted' && feeAmountWei && !feeLoading ? '' : 'btn-disabled'}`}
+                disabled={!isUploaded || !walletConnected || !termsAccepted || transactionStatus === 'sent' || transactionStatus === 'minted' || !feeAmountWei || feeLoading}
+                className={`btn btn-large btn-full-width ${isUploaded && walletConnected && termsAccepted && transactionStatus !== 'sent' && transactionStatus !== 'minted' && feeAmountWei && !feeLoading ? '' : 'btn-disabled'}`}
               >
                 VERIFY ON CHAIN
               </button>
