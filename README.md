@@ -2,6 +2,10 @@
 
 Verify and timestamp any file on the blockchain in about a minute. Your file never leaves your computer; only a cryptographic hash is written on‑chain. Typical cost is around $1 (network fees may vary).
 
+### Website
+- App: https://akashi-notari.com/
+- Certificate retrieval: https://akashi-notari.com/certificate/
+
 ### What you can do
 - **Create an on‑chain proof**: Anchor your file’s SHA‑256 hash on supported networks with a single transaction.
 - **Keep your privacy**: Hashing happens entirely in your browser. No file uploads, ever.
@@ -28,7 +32,7 @@ Each certificate includes:
 - Simple instructions for independently recomputing and comparing the file hash in the future
 
 ### Look up an existing proof
-Already have a transaction? Open the Certificate page and paste a transaction hash or full explorer URL to view registration details and download the certificate again.
+Already have a transaction? Open the Certificate page at https://akashi-notari.com/certificate/ and paste a transaction hash or full explorer URL to view registration details and download the certificate again.
 
 ### Supported networks
 - Base (primary)
