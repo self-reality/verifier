@@ -27,7 +27,7 @@ export function AboutOverlay({ onClose }: AboutOverlayProps) {
         {/* PDF Example */}
         <div style={{ marginBottom: '15px' }}>
           <div className="text-xs" style={{ marginBottom: '5px' }}>
-            PDF EXAMPLE:
+            PDF EXAMPLE & DISCLAIMER:
           </div>
           <a 
             href="/abstract.txt.pdf"
