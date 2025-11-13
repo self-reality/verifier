@@ -7,7 +7,8 @@ import { generateCertificatePDF } from '../utils/pdfGenerator';
 import { AboutOverlay } from '../components/AboutOverlay';
 
 // Fee configuration (in cents, e.g., 100 = $1.00, 1 = $0.01)
-const FEE_CENTS = 1;
+// Set price
+const FEE_CENTS = 48;
 
 export default function Home() {
   // Wagmi hooks
@@ -435,7 +436,8 @@ export default function Home() {
             </div>
           </div>
           <div className="text-xs">
-            VERIFY AND TIMESTAMP ANY FILE FOR JUST $1. YOUR PROOF NEVER LEAVES BLOCKCHAIN.
+            VERIFY AND TIMESTAMP ANY FILE. YOUR PROOF NEVER LEAVES BLOCKCHAIN. 
+            JUST $1 ( LAUNCH WEEK SPECIAL 50% OFF )
           </div>
         </header>
 
