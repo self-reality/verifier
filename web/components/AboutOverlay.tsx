@@ -112,6 +112,26 @@ export function AboutOverlay({ onClose }: AboutOverlayProps) {
           </a>
         </div>
 
+        {/* GitHub */}
+        <div style={{ marginBottom: '15px' }}>
+          <div className="text-xs" style={{ marginBottom: '5px' }}>
+            GITHUB:
+          </div>
+          <a 
+            href="https://github.com/self-reality/verifier"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs"
+            style={{ 
+              color: 'var(--color-accent)',
+              textDecoration: 'underline',
+              wordBreak: 'break-all'
+            }}
+          >
+            github.com/self-reality/verifier
+          </a>
+        </div>
+
         {/* Contact */}
         <div>
           <div className="text-xs" style={{ marginBottom: '5px' }}>
