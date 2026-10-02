@@ -40,12 +40,17 @@ Already have a transaction? Open the Certificate page at https://akashi-notari.c
 - Optimism
 
 ### Contract addresses
+`VerifierRegistry` is the contract the web app writes to, paid in the chain's native token.
 - Base: `0xeed9D0f7265892e84e43d05dA464c75add199260`  
   Explorer: https://basescan.org/address/0xeed9D0f7265892e84e43d05dA464c75add199260#code
 - Ethereum: `0xeed9D0f7265892e84e43d05dA464c75add199260`  
   Explorer: https://etherscan.io/address/0xeed9D0f7265892e84e43d05dA464c75add199260#code
 - Optimism: `0x859Fe07D2995875319b7e65592812392B16BBADe`  
   Explorer: https://optimistic.etherscan.io/address/0x859Fe07D2995875319b7e65592812392B16BBADe#code
+
+`VerifierRegistryUSDC` takes payment in USDC instead of ETH. Agents reach it over x402 at https://anchor.akashi-notari.com (see [workers/anchor](workers/anchor/README.md)); one anchor costs 0.01 USDC.
+- Base: `0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21`  
+  Explorer: https://basescan.org/address/0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21#code
 
 ### Privacy & security
 - Your document never leaves your device. Only the derived hash and transaction data are recorded on‑chain.
