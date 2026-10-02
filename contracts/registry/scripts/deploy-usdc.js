@@ -6,8 +6,13 @@ async function main() {
   // Get deployer from environment
   let deployer;
 
+  // Option 0: Use the local deployer-wallet daemon (DEPLOYER_WALLET=1, after `npm link deployer-wallet`)
+  if (process.env.DEPLOYER_WALLET) {
+    const { connect } = require('deployer-wallet');
+    deployer = await connect({ provider: ethers.provider });
+  }
   // Option 1: Use private key (recommended)
-  if (process.env.DEPLOYER_KEY) {
+  else if (process.env.DEPLOYER_KEY) {
     [deployer] = await ethers.getSigners();
   }
   // Option 2: Use mnemonic file
@@ -17,7 +22,7 @@ async function main() {
     const wallet = ethers.Wallet.fromPhrase(mnemonic);
     deployer = wallet.connect(ethers.provider);
   } else {
-    throw new Error('No deployer credentials found. Set DEPLOYER_KEY or MNEMONIC_FILE_PATH in .env file');
+    throw new Error('No deployer credentials found. Set DEPLOYER_WALLET=1, or DEPLOYER_KEY or MNEMONIC_FILE_PATH in .env file');
   }
 
   const net = await ethers.provider.getNetwork();
