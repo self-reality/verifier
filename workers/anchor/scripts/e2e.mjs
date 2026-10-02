@@ -281,6 +281,10 @@ console.log('\nlookup');
   check('rejects a malformed lookup', (await workerFetch(`${ORIGIN}/proof?hash=xyz`)).status === 400);
   const index = await (await workerFetch(`${ORIGIN}/`)).json();
   check('index describes the service and price', index.payment.price === PRICE.toString() && index.payment.payTo === registry.address);
+  const openapi = await (await workerFetch(`${ORIGIN}/openapi.json`)).json();
+  const paid = openapi.paths['/anchor'].post;
+  check('openapi.json marks /anchor as paid in USD', paid['x-payment-info'].price.amount === '0.500000' && '402' in paid.responses);
+  check('and the free endpoints as open', openapi.paths['/proof'].get.security.length === 0 && Boolean(openapi.info['x-guidance']));
 }
 
 console.log(`\n${passed} checks passed`);

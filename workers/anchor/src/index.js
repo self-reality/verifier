@@ -612,9 +612,139 @@ async function handleIndex(env, origin) {
       'POST /anchor': 'Paid. Body { "hash": "<sha256 hex>", "filename": "<optional>" }. Returns the transaction hash and a certificate link.',
       'GET /proof?hash=<sha256 hex>': 'Free. Every proof of this hash, earliest first.',
       'GET /proof?tx=<transaction hash>': 'Free. The proof written by this transaction.',
+      'GET /openapi.json': 'Free. OpenAPI description of this service.',
       'GET /health': 'Free. Liveness.',
     },
     endpointUrls: { anchor: `${base}/anchor`, proof: `${base}/proof` },
+  });
+}
+
+// OpenAPI is the discovery format directories such as x402scan read before they probe /anchor
+async function handleOpenApi(env, origin) {
+  const cfg = getConfig(env);
+  const base = cfg.publicUrl || origin;
+  let amount = '0.500000';
+  if (cfg.registry && cfg.rpcUrl) {
+    try {
+      // The token has 6 decimals; x-payment-info wants decimal USD
+      const price = await getPrice(cfg, getClients(cfg).publicClient);
+      amount = `${price / 1_000_000n}.${(price % 1_000_000n).toString().padStart(6, '0')}`;
+    } catch (_) {}
+  }
+  const proofSchema = {
+    type: 'object',
+    properties: {
+      hash: { type: 'string' },
+      filename: { type: 'string' },
+      submitter: { type: 'string', description: 'Address that paid for the anchor' },
+      timestamp: { type: 'integer', description: 'Block time, Unix seconds' },
+      timestampIso: { type: 'string' },
+      paid: { type: 'string', description: 'Fee in atomic units of `currency`' },
+      currency: { type: 'string', enum: ['USDC', 'ETH'] },
+      chain: { type: 'string' },
+      chainId: { type: 'integer' },
+      contract: { type: 'string' },
+      txHash: { type: 'string' },
+      blockNumber: { type: 'integer' },
+      explorerUrl: { type: ['string', 'null'] },
+      certificateUrl: { type: ['string', 'null'], description: 'Page where a person can view and download the PDF certificate' },
+    },
+    required: ['hash', 'txHash', 'timestamp'],
+  };
+  return json({
+    openapi: '3.1.0',
+    info: {
+      title: 'Akashi Notari',
+      version: '1.0.0',
+      description:
+        'Proof of existence for any file. The SHA-256 hash is written on-chain on Base and the block time becomes the proof. The file never leaves its owner.',
+      'x-guidance':
+        'Compute the SHA-256 of the file locally and POST /anchor with JSON { "hash": "<64 hex chars>", "filename": "<optional>" } to timestamp it on Base; pay with x402 (USDC on Base). The response holds txHash and certificateUrl, a page where a person can download a PDF certificate. Before paying, call GET /proof?hash=<64 hex chars> for free to see whether the hash is already anchored and when. Never send the file itself.',
+    },
+    servers: [{ url: base }],
+    paths: {
+      '/anchor': {
+        post: {
+          operationId: 'anchor',
+          summary: 'Anchor - write a SHA-256 file hash on-chain as a timestamped proof of existence',
+          tags: ['Notary'],
+          'x-payment-info': {
+            price: { mode: 'fixed', currency: 'USD', amount },
+            protocols: [{ x402: {} }],
+          },
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    hash: {
+                      type: 'string',
+                      pattern: '^(0x)?[0-9a-fA-F]{64}$',
+                      description: 'SHA-256 of the file, 64 hex characters',
+                      example: EXAMPLE_HASH,
+                    },
+                    filename: {
+                      type: 'string',
+                      maxLength: 128,
+                      description: 'Optional name to record with the hash: a-z 0-9 - _ .',
+                      example: 'report.pdf',
+                    },
+                  },
+                  required: ['hash'],
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Anchored. The proof, with the transaction hash and a certificate link',
+              content: {
+                'application/json': {
+                  schema: { ...proofSchema, properties: { ok: { type: 'boolean' }, ...proofSchema.properties } },
+                },
+              },
+            },
+            402: { description: 'Payment Required' },
+          },
+        },
+      },
+      '/proof': {
+        get: {
+          operationId: 'proof',
+          summary: 'Proof - look up the proofs of a file hash, or the proof written by a transaction',
+          tags: ['Notary'],
+          security: [],
+          parameters: [
+            { name: 'hash', in: 'query', required: false, schema: { type: 'string' }, description: 'SHA-256 of the file, 64 hex characters' },
+            { name: 'tx', in: 'query', required: false, schema: { type: 'string' }, description: 'Transaction hash; use instead of hash' },
+          ],
+          responses: {
+            200: {
+              description: 'Whether the hash is anchored, and every proof, earliest first',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: { anchored: { type: 'boolean' }, proofs: { type: 'array', items: proofSchema } },
+                    required: ['anchored', 'proofs'],
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/health': {
+        get: {
+          operationId: 'health',
+          summary: 'Health check',
+          security: [],
+          responses: { 200: { description: 'OK' } },
+        },
+      },
+    },
   });
 }
 
@@ -635,6 +765,7 @@ export default {
     try {
       if (url.pathname === '/health') return json({ ok: true });
       if (url.pathname === '/') return await handleIndex(env, url.origin);
+      if (url.pathname === '/openapi.json') return await handleOpenApi(env, url.origin);
       if (url.pathname === '/anchor') return await handleAnchor(request, env, url.origin);
       if (url.pathname === '/proof') return await handleProof(request, env);
     } catch (err) {

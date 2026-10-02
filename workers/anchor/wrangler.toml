@@ -2,7 +2,10 @@ name = "anchor"
 main = "src/index.js"
 compatibility_date = "2025-11-10"
 
+routes = [{ pattern = "anchor.akashi-notari.com", custom_domain = true }]
+
 [vars]
+PUBLIC_URL = "https://anchor.akashi-notari.com"
 CHAIN_ID = "8453"
 # Address of VerifierRegistryUSDC, from contracts/registry/constants-usdc.json after deployment
 REGISTRY_ADDRESS = "0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21"

@@ -7,6 +7,7 @@ Cloudflare Worker that sells anchors to agents over x402. An agent sends a SHA-2
 - `POST /anchor` → paid. Writes the hash on-chain, returns the transaction hash and a certificate link
 - `GET /proof?hash=<sha256 hex>` → free. Every proof of this hash, earliest first
 - `GET /proof?tx=<transaction hash>` → free. The proof written by this transaction
+- `GET /openapi.json` → OpenAPI description; directories such as x402scan read it before they register `/anchor`
 - `GET /` → service description and current price
 - `GET /health` → `{ ok: true }`
 
