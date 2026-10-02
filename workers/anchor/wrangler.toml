@@ -5,7 +5,7 @@ compatibility_date = "2025-11-10"
 [vars]
 CHAIN_ID = "8453"
 # Address of VerifierRegistryUSDC, from contracts/registry/constants-usdc.json after deployment
-REGISTRY_ADDRESS = ""
+REGISTRY_ADDRESS = "0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21"
 RATE_LIMIT_PER_MIN = 60
 
 [observability]

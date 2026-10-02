@@ -20,10 +20,11 @@ wallet.
 
 ## Status
 
-2026-10-02 — the USDC contract (`VerifierRegistryUSDC`) and the x402 anchor
-worker are built and tested on branch `x402-usdc`; neither is deployed. Tests
-cover a local chain, a Base fork with the real USDC, and the official x402
-client.
+2026-10-02 — `VerifierRegistryUSDC` is deployed and verified on Base at
+`0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21`: price 0.50 USDC, relayer
+`0xf0E21361De4F97AdA748fDD1dD8dBbB698B7289e` allowed. The x402 anchor worker is
+built and tested on branch `x402-usdc` and is not deployed yet; the relayer
+holds no ETH.
 
 2026-10-02 — live on Base, Ethereum and Optimism; web app and price feed
 answer 200; 12 anchors on Base, the latest on 2025-11-14. Payment on the live
@@ -115,7 +116,7 @@ client retries with a signed USDC authorization in `PAYMENT-SIGNATURE`, and
 the server returns the result. The anchor worker in `workers/anchor` speaks
 x402 v2 and settles each payment through `VerifierRegistryUSDC` in the same
 transaction as the anchor, with no facilitator. It becomes callable once the
-contract and the worker are deployed; `POST /anchor` and `GET /proof` join the
+worker is deployed; `POST /anchor` and `GET /proof` join the
 Interface then.
 
 ## Agent hubs
@@ -133,7 +134,7 @@ Interface then.
 - `contracts/registry/contracts/VerifierRegistry.sol` — the contract: `anchor`, `anchorCidOnly`, `anchorBytes32`, fee bounds
 - `contracts/registry/constants.json` — deployed addresses and fee bounds per network
 - `contracts/registry/contracts/VerifierRegistryUSDC.sol` — the USDC contract: `anchorWithAuthorization`, `anchor`, `anchorPaid`
-- `contracts/registry/constants-usdc.json` — deployed USDC contract addresses; empty until deployment
+- `contracts/registry/constants-usdc.json` — deployed USDC contract addresses
 - `workers/anchor/README.md` — the x402 anchor API, its configuration and deployment steps
 - `web/constants/VerifierRegistryABI.ts` — the ABI
 - `web/pages/index.tsx` — the web flow; `FEE_CENTS` sets the fee the app sends
