@@ -2,6 +2,7 @@ import {
   createPublicClient,
   createWalletClient,
   http,
+  fallback,
   defineChain,
   parseEventLogs,
   decodeEventLog,
@@ -25,7 +26,8 @@ const RECOVERY_LOOKBACK_BLOCKS = 1800n;
 const NETWORKS = {
   8453: {
     name: 'base',
-    rpcUrl: 'https://mainnet.base.org',
+    // Tried in order. mainnet.base.org rate-limits Cloudflare's shared addresses, so it comes last
+    rpcUrl: 'https://base.drpc.org,https://base-rpc.publicnode.com,https://mainnet.base.org',
     token: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     tokenName: 'USD Coin',
     tokenVersion: '2',
@@ -77,6 +79,7 @@ function getConfig(env) {
     tokenVersion: env.TOKEN_VERSION || known.tokenVersion,
     explorer: env.EXPLORER_URL || known.explorer || '',
     logsApi: env.LOGS_API_URL !== undefined ? env.LOGS_API_URL : known.logsApi || '',
+    logsApiKey: env.LOGS_API_KEY || '',
     logsFromBlock: BigInt(env.LOGS_FROM_BLOCK || known.logsFromBlock || 0),
     certificateUrl: env.CERTIFICATE_URL || 'https://akashi-notari.com/certificate/',
     certificateChain: env.CERTIFICATE_CHAIN || known.certificateChain || '',
@@ -85,14 +88,20 @@ function getConfig(env) {
   };
 }
 
+// RPC_URL may list several endpoints, comma-separated; they are tried in order
+function rpcUrls(cfg) {
+  return cfg.rpcUrl.split(',').map((url) => url.trim()).filter(Boolean);
+}
+
 function getClients(cfg) {
+  const urls = rpcUrls(cfg);
   const chain = defineChain({
     id: cfg.chainId,
     name: cfg.name,
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-    rpcUrls: { default: { http: [cfg.rpcUrl] } },
+    rpcUrls: { default: { http: urls } },
   });
-  const transport = http(cfg.rpcUrl);
+  const transport = fallback(urls.map((url) => http(url)));
   const publicClient = createPublicClient({ chain, transport, pollingInterval: 1_000 });
   const account = cfg.relayerKey ? privateKeyToAccount(cfg.relayerKey) : null;
   const walletClient = account ? createWalletClient({ account, chain, transport }) : null;
@@ -464,10 +473,21 @@ async function proofsByHash(cfg, publicClient, hash) {
   if (cfg.logsApi) {
     // An explorer API searches the whole chain; public RPC nodes limit eth_getLogs to a short block range
     for (const address of registries(cfg)) {
-      const url =
-        `${cfg.logsApi}?module=logs&action=getLogs&fromBlock=${cfg.logsFromBlock}&toBlock=latest` +
-        `&address=${address}&topic0=${topics[0]}&topic1=${topics[1]}&topic0_1_opr=and`;
-      const res = await fetch(url);
+      // LOGS_API_URL may already carry a query, e.g. Etherscan's ?chainid=8453
+      const url = new URL(cfg.logsApi);
+      const query = {
+        module: 'logs',
+        action: 'getLogs',
+        fromBlock: cfg.logsFromBlock.toString(),
+        toBlock: 'latest',
+        address,
+        topic0: topics[0],
+        topic1: topics[1],
+        topic0_1_opr: 'and',
+      };
+      for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
+      if (cfg.logsApiKey) url.searchParams.set('apikey', cfg.logsApiKey);
+      const res = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'akashi-notari-anchor/1.0' } });
       if (!res.ok) throw new Error(`logs api ${res.status}`);
       const data = await res.json();
       const rows = Array.isArray(data.result) ? data.result : [];
@@ -576,12 +596,15 @@ async function handleProof(request, env) {
 
   if (txParam) {
     if (!/^0x[0-9a-fA-F]{64}$/.test(txParam)) return json({ error: 'tx must be a transaction hash: 0x + 64 hex characters' }, 400);
+    // Pruned nodes answer "not found" for old transactions, so ask each endpoint until one has it
     let receipt;
-    try {
-      receipt = await publicClient.getTransactionReceipt({ hash: txParam });
-    } catch (_) {
-      return json({ tx: txParam, anchored: false, proofs: [] }, 404);
+    for (const url of rpcUrls(cfg)) {
+      try {
+        receipt = await getClients({ ...cfg, rpcUrl: url }).publicClient.getTransactionReceipt({ hash: txParam });
+        break;
+      } catch (_) {}
     }
+    if (!receipt) return json({ tx: txParam, anchored: false, proofs: [] }, 404);
     const proofs = proofsFromReceipt(cfg, receipt);
     return json({ tx: txParam, anchored: proofs.length > 0, proofs }, proofs.length > 0 ? 200 : 404);
   }
@@ -623,7 +646,7 @@ async function handleIndex(env, origin) {
 async function handleOpenApi(env, origin) {
   const cfg = getConfig(env);
   const base = cfg.publicUrl || origin;
-  let amount = '0.500000';
+  let amount = '0.010000';
   if (cfg.registry && cfg.rpcUrl) {
     try {
       // The token has 6 decimals; x-payment-info wants decimal USD

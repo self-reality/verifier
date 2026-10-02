@@ -24,7 +24,7 @@ Without a `PAYMENT-SIGNATURE` header the worker answers `402` with the terms in 
     {
       "scheme": "exact",
       "network": "eip155:8453",
-      "amount": "500000",
+      "amount": "10000",
       "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       "payTo": "<VerifierRegistryUSDC>",
       "maxTimeoutSeconds": 120,
@@ -44,7 +44,7 @@ The amount is read from `price()` on the contract, so the quote and the contract
   "submitter": "<payer address>",
   "timestamp": 1790919801,
   "timestampIso": "2026-10-02T05:43:21.000Z",
-  "paid": "500000",
+  "paid": "10000",
   "currency": "USDC",
   "chain": "base",
   "txHash": "0x...",
@@ -85,6 +85,7 @@ const res = await pay('https://<worker>/anchor', {
 - The official x402 client refuses payments above $1 unless its user raises the limit; keep the price at or below $1 for agents to pay without configuration
 - Concurrent requests share one relayer key. A colliding nonce is retried three times; heavy traffic needs a queue
 - `/proof?hash=` searches through the Blockscout API, since public RPC nodes limit `eth_getLogs` to a short block range
+- Public RPC nodes and the keyless Blockscout API refuse or rate-limit requests from Cloudflare's shared addresses. In production set `RPC_URL` to a keyed endpoint and `LOGS_API_KEY` to an explorer API key, both as secrets
 - Rate limited to `RATE_LIMIT_PER_MIN` requests per IP (default 60)
 
 ## Environment Variables
@@ -92,9 +93,10 @@ const res = await pay('https://<worker>/anchor', {
 - `RELAYER_PRIVATE_KEY`: secret. The wallet that sends the transactions. It needs ETH for gas and `setRelayer(address, true)` on the contract
 - `REGISTRY_ADDRESS`: the deployed `VerifierRegistryUSDC`
 - `CHAIN_ID`: `8453` (Base, default) or `84532` (Base Sepolia). These two have built-in defaults for everything below
-- `RPC_URL`, `TOKEN_ADDRESS`, `TOKEN_NAME`, `TOKEN_VERSION`, `EXPLORER_URL`: optional overrides. `TOKEN_NAME` and `TOKEN_VERSION` are the token's EIP-712 domain
+- `RPC_URL`: one or more RPC endpoints, comma-separated, tried in order. The default for Base is a list of public nodes; set a keyed endpoint (Alchemy, Infura) as a secret for production traffic
+- `TOKEN_ADDRESS`, `TOKEN_NAME`, `TOKEN_VERSION`, `EXPLORER_URL`: optional overrides. `TOKEN_NAME` and `TOKEN_VERSION` are the token's EIP-712 domain
 - `LEGACY_REGISTRY_ADDRESS`: the ETH `VerifierRegistry`, included in lookups
-- `LOGS_API_URL`, `LOGS_FROM_BLOCK`: Blockscout-compatible logs API for `/proof?hash=`. Set `LOGS_API_URL` empty to use the RPC node
+- `LOGS_API_URL`, `LOGS_API_KEY`, `LOGS_FROM_BLOCK`: Blockscout-compatible logs API for `/proof?hash=`, and an optional API key for it. Set `LOGS_API_URL` empty to use the RPC node
 - `PUBLIC_URL`: the worker's public origin, used in the `resource.url` it advertises
 - `CERTIFICATE_URL`, `CERTIFICATE_CHAIN`: where certificate links point
 - `RATE_LIMIT_PER_MIN`: default 60

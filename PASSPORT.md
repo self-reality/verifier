@@ -20,11 +20,15 @@ wallet.
 
 ## Status
 
+2026-10-02 — the x402 anchor worker is deployed at
+https://anchor.akashi-notari.com: `POST /anchor` quotes 0.01 USDC and
+`/openapi.json` answers. `GET /proof` fails in production until the worker gets
+a keyed RPC endpoint and an explorer API key; no paid anchor has been made on
+mainnet yet. The work sits on branch `x402-usdc`, not merged.
+
 2026-10-02 — `VerifierRegistryUSDC` is deployed and verified on Base at
-`0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21`: price 0.50 USDC, relayer
-`0xf0E21361De4F97AdA748fDD1dD8dBbB698B7289e` allowed. The x402 anchor worker is
-built and tested on branch `x402-usdc` and is not deployed yet; the relayer
-holds no ETH.
+`0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21`: price 0.01 USDC, relayer
+`0xf0E21361De4F97AdA748fDD1dD8dBbB698B7289e` allowed and funded.
 
 2026-10-02 — live on Base, Ethereum and Optimism; web app and price feed
 answer 200; 12 anchors on Base, the latest on 2025-11-14. Payment on the live
@@ -43,6 +47,7 @@ contract is ETH sent with the call. No MCP server or agent card yet.
 | Anchor worker end-to-end test | `cd contracts/registry && npx hardhat node`, then `cd workers/anchor && pnpm test:e2e` |
 | Deploy the USDC contract | `cd contracts/registry && RELAYER_ADDRESS=<address> pnpm hardhat run scripts/deploy-usdc.js --network <network>` |
 | Deploy the anchor worker | `cd workers/anchor && npx wrangler deploy` |
+| Apply the price or relayer from `scripts/config.json` | `cd contracts/registry && pnpm hardhat run scripts/manage-usdc.js --network <network>` |
 | Deploy the contract | `cd contracts/registry && pnpm hardhat run scripts/deploy.js --network <network>` |
 | Change fee bounds or owner | `cd contracts/registry && npx hardhat run scripts/manage.js --network <network>` |
 
@@ -115,9 +120,8 @@ x402 is the open standard for agent payments over HTTP: the server answers
 client retries with a signed USDC authorization in `PAYMENT-SIGNATURE`, and
 the server returns the result. The anchor worker in `workers/anchor` speaks
 x402 v2 and settles each payment through `VerifierRegistryUSDC` in the same
-transaction as the anchor, with no facilitator. It becomes callable once the
-worker is deployed; `POST /anchor` and `GET /proof` join the
-Interface then.
+transaction as the anchor, with no facilitator. `POST /anchor` and `GET /proof`
+join the Interface once a paid anchor and the lookups are confirmed on mainnet.
 
 ## Agent hubs
 
