@@ -22,10 +22,11 @@ wallet.
 
 2026-10-02 — the x402 anchor worker is live at
 https://anchor.akashi-notari.com. A paid anchor from the official x402 client
-confirmed on Base mainnet for 0.01 USDC (tx `0xded04ea1…52dc0e`). `GET /proof`
-is unreliable in production until the worker gets a keyed RPC endpoint and an
-explorer API key. The work sits on branch `x402-usdc`, not merged, so the
-certificate page does not read the new contract yet.
+confirmed on Base mainnet for 0.01 USDC (tx `0xded04ea1…52dc0e`), and
+`GET /proof?tx=` answers. `GET /proof?hash=` fails in production: no keyless
+log index accepts requests from Cloudflare, and the Alchemy and Etherscan free
+tiers do not search logs across Base. The work sits on branch `x402-usdc`, not
+merged, so the certificate page does not read the new contract yet.
 
 2026-10-02 — `VerifierRegistryUSDC` is deployed and verified on Base at
 `0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21`: price 0.01 USDC, relayer

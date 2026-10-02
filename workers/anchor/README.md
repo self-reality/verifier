@@ -96,6 +96,7 @@ const res = await pay('https://<worker>/anchor', {
 - `REGISTRY_ADDRESS`: the deployed `VerifierRegistryUSDC`
 - `CHAIN_ID`: `8453` (Base, default) or `84532` (Base Sepolia). These two have built-in defaults for everything below
 - `RPC_URL`: one or more RPC endpoints, comma-separated, tried in order. The default for Base is a list of public nodes; set a keyed endpoint (Alchemy, Infura) as a secret for production traffic
+- `RPC_ORIGIN`: sent as the `Origin` header on RPC calls, for a provider key restricted to an origin allowlist
 - `TOKEN_ADDRESS`, `TOKEN_NAME`, `TOKEN_VERSION`, `EXPLORER_URL`: optional overrides. `TOKEN_NAME` and `TOKEN_VERSION` are the token's EIP-712 domain
 - `LEGACY_REGISTRY_ADDRESS`: the ETH `VerifierRegistry`, included in lookups
 - `LOGS_API_URL`, `LOGS_API_KEY`, `LOGS_FROM_BLOCK`: Blockscout-compatible logs API for `/proof?hash=`, and an optional API key for it. Set `LOGS_API_URL` empty to use the RPC node

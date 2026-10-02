@@ -74,6 +74,7 @@ function getConfig(env) {
     network: `eip155:${chainId}`,
     name: env.NETWORK_NAME || known.name || `chain-${chainId}`,
     rpcUrl: env.RPC_URL || known.rpcUrl,
+    rpcOrigin: env.RPC_ORIGIN || '',
     registry: addressOrNull(env.REGISTRY_ADDRESS),
     legacyRegistry: addressOrNull(env.LEGACY_REGISTRY_ADDRESS || known.legacyRegistry),
     token: addressOrNull(env.TOKEN_ADDRESS || known.token),
@@ -103,7 +104,9 @@ function getClients(cfg) {
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: { default: { http: urls } },
   });
-  const transport = fallback(urls.map((url) => http(url)));
+  // A provider key restricted to an origin allowlist needs the Origin header a browser would send
+  const options = cfg.rpcOrigin ? { fetchOptions: { headers: { origin: cfg.rpcOrigin } } } : {};
+  const transport = fallback(urls.map((url) => http(url, options)));
   const publicClient = createPublicClient({ chain, transport, pollingInterval: 1_000 });
   const account = cfg.relayerKey ? privateKeyToAccount(cfg.relayerKey) : null;
   const walletClient = account ? createWalletClient({ account, chain, transport }) : null;
