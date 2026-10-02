@@ -20,11 +20,12 @@ wallet.
 
 ## Status
 
-2026-10-02 — the x402 anchor worker is deployed at
-https://anchor.akashi-notari.com: `POST /anchor` quotes 0.01 USDC and
-`/openapi.json` answers. `GET /proof` fails in production until the worker gets
-a keyed RPC endpoint and an explorer API key; no paid anchor has been made on
-mainnet yet. The work sits on branch `x402-usdc`, not merged.
+2026-10-02 — the x402 anchor worker is live at
+https://anchor.akashi-notari.com. A paid anchor from the official x402 client
+confirmed on Base mainnet for 0.01 USDC (tx `0xded04ea1…52dc0e`). `GET /proof`
+is unreliable in production until the worker gets a keyed RPC endpoint and an
+explorer API key. The work sits on branch `x402-usdc`, not merged, so the
+certificate page does not read the new contract yet.
 
 2026-10-02 — `VerifierRegistryUSDC` is deployed and verified on Base at
 `0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21`: price 0.01 USDC, relayer

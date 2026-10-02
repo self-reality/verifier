@@ -7,6 +7,8 @@ import {
   parseEventLogs,
   decodeEventLog,
   encodeEventTopics,
+  encodeFunctionData,
+  keccak256,
   getAddress,
   isAddress,
   isHex,
@@ -337,21 +339,47 @@ function classifyRevert(reason) {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Concurrent requests share one relayer key, so a nonce can collide; retry the broadcast a few times
-async function sendAndWait(clients, request) {
-  let txHash;
-  for (let attempt = 0; ; attempt++) {
+// Ask each endpoint in turn: a pruned or rate-limited node must not hide a mined transaction
+async function findReceipt(cfg, txHash) {
+  for (const url of rpcUrls(cfg)) {
     try {
-      txHash = await clients.walletClient.writeContract(request);
-      break;
+      return await getClients({ ...cfg, rpcUrl: url, relayerKey: '' }).publicClient.getTransactionReceipt({ hash: txHash });
+    } catch (_) {}
+  }
+  return null;
+}
+
+// Sign, broadcast and wait. The transaction hash is known before the broadcast, so an RPC error
+// after that point never turns a sent payment into a reported failure.
+// Returns { txHash, receipt }; receipt is null when no endpoint reported it in time.
+async function sendAndWait(cfg, clients, call) {
+  const { publicClient, walletClient, account } = clients;
+  const data = encodeFunctionData({ abi: REGISTRY_ABI, ...call });
+  let txHash;
+  let lastError;
+  // Concurrent requests share one relayer key, so a nonce can collide; prepare again with a fresh one
+  for (let attempt = 0; attempt < 3 && !txHash; attempt++) {
+    const prepared = await walletClient.prepareTransactionRequest({ account, to: cfg.registry, data });
+    const serialized = await walletClient.signTransaction(prepared);
+    const candidate = keccak256(serialized);
+    try {
+      await publicClient.sendRawTransaction({ serializedTransaction: serialized });
+      txHash = candidate;
     } catch (err) {
-      if (attempt >= 2 || !/nonce|underpriced|already known/i.test(revertReason(err))) throw err;
-      await sleep(400 * (attempt + 1));
+      lastError = err;
+      // The node may have taken the transaction even though the call failed
+      if (/already known/i.test(revertReason(err)) || (await findReceipt(cfg, candidate))) txHash = candidate;
+      else await sleep(400 * (attempt + 1));
     }
   }
-  const receipt = await clients.publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 });
-  if (receipt.status !== 'success') throw new Error('transaction reverted');
-  return receipt;
+  if (!txHash) throw lastError;
+
+  for (let poll = 0; poll < 30; poll++) {
+    const receipt = await findReceipt(cfg, txHash);
+    if (receipt) return { txHash, receipt };
+    await sleep(1000);
+  }
+  return { txHash, receipt: null };
 }
 
 // True when the token shows this authorization moved `value` from the payer to the registry.
@@ -378,23 +406,22 @@ async function transferHappened(cfg, publicClient, auth) {
   );
 }
 
-// Returns { receipt } on success, or { error, status } when the payment cannot be settled
+// Returns { sent: { txHash, receipt } } once a transaction is broadcast, or { error, status } when the payment cannot be settled
 async function settle(cfg, clients, hash, filename, auth) {
   const { publicClient, account } = clients;
   const base = { account, address: cfg.registry, abi: REGISTRY_ABI };
+  const call = { functionName: 'anchorWithAuthorization', args: [hash, filename, auth] };
   let simulationError;
   try {
-    const { request } = await publicClient.simulateContract({
-      ...base,
-      functionName: 'anchorWithAuthorization',
-      args: [hash, filename, auth],
-    });
-    return { receipt: await sendAndWait(clients, request) };
+    await publicClient.simulateContract({ ...base, ...call });
   } catch (err) {
     simulationError = err;
   }
+  // Only the simulation decides whether the payment is acceptable; errors after the broadcast are not payment failures
+  if (!simulationError) return { sent: await sendAndWait(cfg, clients, call) };
 
   const reason = revertReason(simulationError);
+  console.error('anchor simulation failed', reason.slice(0, 1500));
   if (/not payer or relayer/i.test(reason)) return { error: 'relayer_not_allowed', status: 500 };
 
   // The authorization may have been executed on the token already, by a facilitator or a front-runner
@@ -412,12 +439,9 @@ async function settle(cfg, clients, hash, filename, auth) {
     });
     if (alreadyAnchored) return { error: 'payment_already_used', status: 409 };
     if (await transferHappened(cfg, publicClient, auth)) {
-      const { request } = await publicClient.simulateContract({
-        ...base,
-        functionName: 'anchorPaid',
-        args: [hash, filename, auth.from, auth.value, auth.nonce],
-      });
-      return { receipt: await sendAndWait(clients, request) };
+      const paidCall = { functionName: 'anchorPaid', args: [hash, filename, auth.from, auth.value, auth.nonce] };
+      await publicClient.simulateContract({ ...base, ...paidCall });
+      return { sent: await sendAndWait(cfg, clients, paidCall) };
     }
     return { error: 'invalid_transaction_state', status: 402 };
   }
@@ -574,16 +598,42 @@ async function handleAnchor(request, env, origin) {
     return json({ error: result.error, ...extra }, result.status, { 'payment-response': encodeHeader(failure(result.error)) });
   }
 
-  const { receipt } = result;
-  const proof = proofsFromReceipt(cfg, receipt)[0];
+  const { txHash, receipt } = result.sent;
+  if (receipt && receipt.status !== 'success') {
+    // Reverted on-chain: the payment reverted with it
+    return paymentRequired(cfg, price, origin, 'invalid_transaction_state', failure('invalid_transaction_state'));
+  }
   const settlement = {
     success: true,
-    transaction: receipt.transactionHash,
+    transaction: txHash,
     network: cfg.network,
     payer: auth.from,
     amount: auth.value.toString(),
   };
-  return json({ ok: true, ...proof }, 200, { 'payment-response': encodeHeader(settlement) });
+  const headers = { 'payment-response': encodeHeader(settlement) };
+  if (!receipt) {
+    // Broadcast, but no endpoint has reported it mined yet
+    return json(
+      {
+        ok: true,
+        status: 'submitted',
+        hash,
+        filename,
+        submitter: auth.from,
+        chain: cfg.name,
+        chainId: cfg.chainId,
+        contract: cfg.registry,
+        txHash,
+        explorerUrl: cfg.explorer ? `${cfg.explorer}/tx/${txHash}` : null,
+        certificateUrl: certificateUrl(cfg, txHash),
+        lookup: `${cfg.publicUrl || origin}/proof?tx=${txHash}`,
+      },
+      200,
+      headers
+    );
+  }
+  const proof = proofsFromReceipt(cfg, receipt)[0];
+  return json({ ok: true, status: 'confirmed', ...proof }, 200, headers);
 }
 
 async function handleProof(request, env) {
@@ -596,14 +646,8 @@ async function handleProof(request, env) {
 
   if (txParam) {
     if (!/^0x[0-9a-fA-F]{64}$/.test(txParam)) return json({ error: 'tx must be a transaction hash: 0x + 64 hex characters' }, 400);
-    // Pruned nodes answer "not found" for old transactions, so ask each endpoint until one has it
-    let receipt;
-    for (const url of rpcUrls(cfg)) {
-      try {
-        receipt = await getClients({ ...cfg, rpcUrl: url }).publicClient.getTransactionReceipt({ hash: txParam });
-        break;
-      } catch (_) {}
-    }
+    // Pruned nodes answer "not found" for old transactions, so each endpoint is asked until one has it
+    const receipt = await findReceipt(cfg, txParam);
     if (!receipt) return json({ tx: txParam, anchored: false, proofs: [] }, 404);
     const proofs = proofsFromReceipt(cfg, receipt);
     return json({ tx: txParam, anchored: proofs.length > 0, proofs }, proofs.length > 0 ? 200 : 404);

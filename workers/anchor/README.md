@@ -39,6 +39,7 @@ The amount is read from `price()` on the contract, so the quote and the contract
 ```json
 {
   "ok": true,
+  "status": "confirmed",
   "hash": "be44340d151cbfa7a5dc59b579dd6632fb0891b573f8fdc927264309a3b168f0",
   "filename": "report.pdf",
   "submitter": "<payer address>",
@@ -79,6 +80,7 @@ const res = await pay('https://<worker>/anchor', {
 ## Notes
 
 - The transaction either moves the USDC and emits the proof, or reverts and moves nothing
+- The response has `status: "confirmed"` with the full proof once the transaction is mined. If no RPC endpoint reports it within 30 seconds the response is still `200`, with `status: "submitted"`, the `txHash` and a `lookup` URL. A payment that was broadcast is never reported as failed
 - The on-chain `submitter` is the payer, not the relayer
 - If an authorization was already executed on the token (by a facilitator, or by someone who front-ran the relayer), the worker confirms the transfer to the contract in the token's logs and anchors it with `anchorPaid`. It looks back 1,800 blocks
 - A canceled authorization buys nothing
