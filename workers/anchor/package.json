@@ -1,0 +1,23 @@
+{
+  "name": "anchor-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "lint": "echo 'no lint configured'",
+    "test": "node --version && echo 'use: pnpm test:e2e (needs a local hardhat node)'",
+    "test:e2e": "node scripts/e2e.mjs",
+    "build": "echo 'workers build handled by wrangler'"
+  },
+  "dependencies": {
+    "viem": "^2.38.6"
+  },
+  "devDependencies": {
+    "@x402/evm": "^2.28.0",
+    "@x402/fetch": "^2.28.0",
+    "wrangler": "^3.80.0"
+  }
+}

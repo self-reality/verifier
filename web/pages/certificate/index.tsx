@@ -5,7 +5,8 @@ import Head from 'next/head';
 import { parseTransactionUrl, validateTxHash, getNetworkName, getTxUrl } from '../../utils';
 import { generateCertificatePDF } from '../../utils/pdfGenerator';
 import {
-  getContractAddress,
+  getProofContractAddresses,
+  USDC_CONTRACT_ADDRESSES,
   BASE_CHAIN_ID,
   ETHEREUM_CHAIN_ID,
   OPTIMISM_CHAIN_ID,
@@ -89,9 +90,9 @@ export default function CertificatePage() {
 
       try {
         const chainId = CHAIN_NAME_TO_ID[chainName];
-        const contractAddress = getContractAddress(chainId);
+        const contractAddresses = getProofContractAddresses(chainId);
 
-        if (!contractAddress) {
+        if (contractAddresses.length === 0) {
           throw new Error(`Contract not deployed on ${chainName}`);
         }
 
@@ -101,7 +102,7 @@ export default function CertificatePage() {
           throw new Error('Transaction not found. Please check the hash and chain.');
         }
 
-        const eventData = decodeAnchoredEvent(receipt, contractAddress);
+        const eventData = decodeAnchoredEvent(receipt, contractAddresses);
 
         if (!eventData) {
           throw new Error(
@@ -232,7 +233,11 @@ export default function CertificatePage() {
         chainId: CHAIN_NAME_TO_ID[selectedChain],
         transactionHash: registrationData.txHash,
         feeAmountWei: registrationData.paid,
-        feeCurrencyTicker: 'ETH',
+        feeCurrencyTicker:
+          registrationData.contractAddress.toLowerCase() ===
+          USDC_CONTRACT_ADDRESSES[CHAIN_NAME_TO_ID[selectedChain]]?.toLowerCase()
+            ? 'USDC'
+            : 'ETH',
       });
 
       setPdfReady(true);

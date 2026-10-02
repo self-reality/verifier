@@ -6,7 +6,11 @@ Overview
 
 Structure
 - `registry/contracts/VerifierRegistry.sol`: Core registry contract.
+- `registry/contracts/VerifierRegistryUSDC.sol`: Registry paid in USDC, with a signed EIP-3009 authorization (x402) or an allowance.
+- `registry/contracts/mocks/MockUSDC.sol`: Test token with the EIP-3009 functions of USDC.
 - `registry/scripts/deploy.js`: Deployment script.
+- `registry/scripts/deploy-usdc.js`: Deployment script for `VerifierRegistryUSDC`.
+- `registry/constants-usdc.json`: Last deployed `VerifierRegistryUSDC` addresses by network.
 - `registry/scripts/manage.js`: Management script for updating fees and ownership.
 - `registry/scripts/verify.js`: Verification script for block explorers.
 - `registry/scripts/config.json`: Source configuration for deployments and management.
@@ -138,6 +142,29 @@ This script will:
 6. Update `constants.json` with the new configuration
 
 **Note:** Ensure you have `DEPLOYER_KEY` or `MNEMONIC_FILE_PATH` set in your `.env` file, and that the deployer account is the current owner of the contract.
+
+## USDC Registry
+
+`VerifierRegistryUSDC` takes the fee in USDC and emits the same `Anchored` event as `VerifierRegistry`, with `paid` in token units.
+
+- `anchorWithAuthorization(cid, filename, auth)`: pulls the USDC with a signed EIP-3009 authorization addressed to the contract and emits the proof in one transaction. Callable by the payer or by an allowed relayer. This is what the anchor worker (`workers/anchor`) calls for x402 payments.
+- `anchor(cid, filename)`: pays `price` from an allowance.
+- `anchorPaid(cid, filename, from, value, nonce)`: relayer only. Anchors against an authorization that was already executed on the token.
+- `setPrice`, `setRelayer`, `withdraw(token, to)`: owner only.
+
+The token address and price per network live under `usdc` in `scripts/config.json` (price in token units: `500000` = 0.50 USDC).
+
+```bash
+# RELAYER_ADDRESS is the wallet the anchor worker sends from; it is allowed at deployment
+RELAYER_ADDRESS=0x... pnpm hardhat run scripts/deploy-usdc.js --network baseSepolia
+RELAYER_ADDRESS=0x... pnpm hardhat run scripts/deploy-usdc.js --network base
+```
+
+The address is written to `constants-usdc.json`, which the web app reads to show certificates for these proofs. To verify on a block explorer:
+
+```bash
+npx hardhat verify --network base <address> <owner> <token> <price>
+```
 
 ## Verification
 

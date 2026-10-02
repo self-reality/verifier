@@ -20,10 +20,14 @@ wallet.
 
 ## Status
 
+2026-10-02 — the USDC contract (`VerifierRegistryUSDC`) and the x402 anchor
+worker are built and tested on branch `x402-usdc`; neither is deployed. Tests
+cover a local chain, a Base fork with the real USDC, and the official x402
+client.
+
 2026-10-02 — live on Base, Ethereum and Optimism; web app and price feed
-answer 200; 12 anchors on Base, the latest on 2025-11-14; last code change
-2025-11-13. Payment is ETH sent with the contract call. The service has no
-x402 endpoint, MCP server or agent card yet.
+answer 200; 12 anchors on Base, the latest on 2025-11-14. Payment on the live
+contract is ETH sent with the call. No MCP server or agent card yet.
 
 ## Entry points
 
@@ -34,6 +38,10 @@ x402 endpoint, MCP server or agent card yet.
 | Web app, local | `cd web && npm run dev` |
 | Contract tests | `cd contracts/registry && npx hardhat test` |
 | Price-feed worker, local | `cd workers/price-feed && pnpm dev` |
+| Anchor worker (x402), local | `cd workers/anchor && pnpm dev` |
+| Anchor worker end-to-end test | `cd contracts/registry && npx hardhat node`, then `cd workers/anchor && pnpm test:e2e` |
+| Deploy the USDC contract | `cd contracts/registry && RELAYER_ADDRESS=<address> pnpm hardhat run scripts/deploy-usdc.js --network <network>` |
+| Deploy the anchor worker | `cd workers/anchor && npx wrangler deploy` |
 | Deploy the contract | `cd contracts/registry && pnpm hardhat run scripts/deploy.js --network <network>` |
 | Change fee bounds or owner | `cd contracts/registry && npx hardhat run scripts/manage.js --network <network>` |
 
@@ -103,15 +111,19 @@ $0.48. The contract enforces `minFee..maxFee`; on Base those read `0` and
 
 x402 is the open standard for agent payments over HTTP: the server answers
 `402 Payment Required` with the price in a `PAYMENT-REQUIRED` header, the
-client retries with a signed USDC authorization in `PAYMENT-SIGNATURE`, a
-facilitator settles it on-chain, and the server returns the result. This
-service speaks no x402 today.
+client retries with a signed USDC authorization in `PAYMENT-SIGNATURE`, and
+the server returns the result. The anchor worker in `workers/anchor` speaks
+x402 v2 and settles each payment through `VerifierRegistryUSDC` in the same
+transaction as the anchor, with no facilitator. It becomes callable once the
+contract and the worker are deployed; `POST /anchor` and `GET /proof` join the
+Interface then.
 
 ## Agent hubs
 
 - GitHub — this file at https://github.com/self-reality/verifier is the card to link from any hub
 - Moltbook, agent forums and Discord — post the purpose paragraph and the `anchor` / `proofByHash` actions; the on-chain interface needs no listing approval
-- x402 Bazaar and x402scan — list only services that answer `402` with an x402 schema; open to this project once it has an x402 endpoint
+- x402scan — registers a URL that answers `402` with an x402 schema; open once the anchor worker is deployed
+- x402 Bazaar — indexes endpoints whose payments Coinbase's facilitator settles; the anchor worker settles its own
 - MCP registries — list MCP servers; open once the actions are wrapped as MCP tools
 - ERC-8004 agent registries and A2A — read `/.well-known/agent-card.json`; the site serves none today
 
@@ -120,6 +132,9 @@ service speaks no x402 today.
 - `README.md` — the service described for humans, with contract addresses
 - `contracts/registry/contracts/VerifierRegistry.sol` — the contract: `anchor`, `anchorCidOnly`, `anchorBytes32`, fee bounds
 - `contracts/registry/constants.json` — deployed addresses and fee bounds per network
+- `contracts/registry/contracts/VerifierRegistryUSDC.sol` — the USDC contract: `anchorWithAuthorization`, `anchor`, `anchorPaid`
+- `contracts/registry/constants-usdc.json` — deployed USDC contract addresses; empty until deployment
+- `workers/anchor/README.md` — the x402 anchor API, its configuration and deployment steps
 - `web/constants/VerifierRegistryABI.ts` — the ABI
 - `web/pages/index.tsx` — the web flow; `FEE_CENTS` sets the fee the app sends
 - `web/utils/txParser.ts` — how the certificate page decodes a proof

@@ -29,6 +29,7 @@ const clients = {
 };
 
 export interface AnchoredEventData {
+  contractAddress: string;
   cid: string;
   filename: string;
   submitter: string;
@@ -55,11 +56,12 @@ export async function fetchTransactionReceipt(txHash: string, chainId: number) {
 
 export function decodeAnchoredEvent(
   receipt: any,
-  contractAddress: string
+  contractAddresses: string[]
 ): AnchoredEventData | null {
-  // Find the Anchored event from the contract
+  // Find the Anchored event from one of the registry contracts
+  const addresses = contractAddresses.map((address) => address.toLowerCase());
   const anchoredLog = receipt.logs.find((log: Log) => {
-    return log.address.toLowerCase() === contractAddress.toLowerCase();
+    return addresses.includes(log.address.toLowerCase());
   });
 
   if (!anchoredLog) {
@@ -83,6 +85,7 @@ export function decodeAnchoredEvent(
     }) as any;
 
     return {
+      contractAddress: anchoredLog.address,
       cid: decoded.args.cid as string,
       filename: decoded.args.filename as string,
       submitter: decoded.args.submitter as string,

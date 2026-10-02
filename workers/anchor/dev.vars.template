@@ -1,0 +1,12 @@
+# Copy to .dev.vars for `wrangler dev`. In production set the key with: npx wrangler secret put RELAYER_PRIVATE_KEY
+
+# Wallet that sends the anchor transactions. It needs ETH for gas and must be allowed with setRelayer on the contract.
+RELAYER_PRIVATE_KEY=0x...
+
+# Base Sepolia example
+# CHAIN_ID=84532
+# REGISTRY_ADDRESS=0x...
+
+# Optional overrides
+# RPC_URL=https://mainnet.base.org
+# PUBLIC_URL=https://anchor.akashi-notari.com
