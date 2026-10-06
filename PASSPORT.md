@@ -36,7 +36,9 @@ it. `/mcp`, `/.well-known/x402`, `/.well-known/agent-registration.json` and
 `/llms.txt` answer. A paid anchor through the MCP tool `anchor_hash` confirmed
 as well (tx `0x02fdc536…fe56665db`). The agent is registered on the ERC-8004
 IdentityRegistry on Base as id `98097` (tx `0xa18e681b…70fbac01`), owned by
-`0xa88630300706488e9d31597ccC4394206F4D4C6C`. Still open: `/proof?hash=` does
+`0xa88630300706488e9d31597ccC4394206F4D4C6C`. The web app was rebuilt and
+uploaded, so the certificate page reads the USDC contract too; it still
+anchors on the ETH `VerifierRegistry` only. Still open: `/proof?hash=` does
 not search the ETH contract in production (it is listed as `unsearched`) until
 `LOGS_API_KEY` is set; x402scan and the MCP registry are not registered yet.
 
@@ -63,6 +65,7 @@ contract is ETH sent with the call. No MCP server or agent card yet.
 | Web app (humans) | https://akashi-notari.com/ |
 | Certificate page for a proof | `https://akashi-notari.com/certificate/?chain=<base\|ethereum\|optimism>&hash=<txHash>` |
 | Web app, local | `cd web && npm run dev` |
+| Deploy the web app | `cd web && npx next build && npx wrangler pages deploy out --project-name akashi-notari --branch main` — a push to `main` does not build it |
 | Contract tests | `cd contracts/registry && npx hardhat test` |
 | Price-feed worker, local | `cd workers/price-feed && pnpm dev` |
 | Anchor worker (x402), local | `cd workers/anchor && pnpm dev` |
