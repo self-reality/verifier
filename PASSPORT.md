@@ -40,7 +40,8 @@ IdentityRegistry on Base as id `98097` (tx `0xa18e681b…70fbac01`), owned by
 uploaded, so the certificate page reads the USDC contract too; it still
 anchors on the ETH `VerifierRegistry` only. Still open: `/proof?hash=` does
 not search the ETH contract in production (it is listed as `unsearched`) until
-`LOGS_API_KEY` is set; x402scan and the MCP registry are not registered yet.
+`LOGS_API_KEY` is set; the MCP registry entry is not published yet. The
+service is listed on x402scan, and the certificate page shows agent proofs.
 
 2026-10-02 — the x402 anchor worker is live at
 https://anchor.akashi-notari.com. A paid anchor from the official x402 client
@@ -174,7 +175,7 @@ Interface are the HTTP form.
 
 Each hub reads something the anchor worker serves, and all of it is live.
 
-- x402scan — reads `/openapi.json`, then `/.well-known/x402`, then probes `POST /anchor` for a `402`. Register the origin `https://anchor.akashi-notari.com`. Check first with `npx -y @agentcash/discovery anchor.akashi-notari.com -v`
+- x402scan — listed: https://www.x402scan.com/server/c024ee6c-534b-4dae-ae6a-a07302a74572. It reads `/openapi.json`, then `/.well-known/x402`, then probes `POST /anchor` for a `402`; check changes first with `npx -y @agentcash/discovery anchor.akashi-notari.com -v`
 - MCP registries — `workers/anchor/server.json` names the remote server `io.github.self-reality/akashi-notari` at `https://anchor.akashi-notari.com/mcp`. Publish with `mcp-publisher login github` and `mcp-publisher publish` from `workers/anchor`
 - ERC-8004 agent registries — done: agent id `98097` on the Base IdentityRegistry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, pointing at `https://anchor.akashi-notari.com/.well-known/agent-registration.json`. `contracts/registry/scripts/register-agent.js` registers on another chain; add the new id to `AGENT_REGISTRATIONS` in `workers/anchor/wrangler.toml`
 - GitHub, Moltbook, agent forums and Discord — link this file and `https://anchor.akashi-notari.com/llms.txt`
