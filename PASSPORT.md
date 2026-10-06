@@ -28,14 +28,16 @@ returns submitter, time and block, so a lookup by hash is one contract read
 plus a one-block log query. This is the contract for agents; the web app keeps
 writing to the ETH `VerifierRegistry`.
 
-2026-10-06 — the anchor worker in the repo points at that contract, answers
-`GET /proof?hash=` from `firstAnchor`, and serves an MCP endpoint (`/mcp`),
-`/.well-known/x402`, `/.well-known/agent-registration.json` and `/llms.txt`;
-65 end-to-end checks pass on a local chain. Not yet deployed: production
-still runs the 2026-10-02 build against `0xf738aD92…dF21`, where
-`/proof?hash=` fails. The live certificate page does not read the USDC
-contract either, so certificate links for agent proofs need the web app
-rebuilt from this branch.
+2026-10-06 — the anchor worker at https://anchor.akashi-notari.com runs
+against that contract. A paid anchor from the official x402 client confirmed
+on Base mainnet for 0.01 USDC (tx `0x36ad32c8…268f7046`), and
+`GET /proof?hash=`, `GET /proof?tx=` and the MCP tool `find_proof` all return
+it. `/mcp`, `/.well-known/x402`, `/.well-known/agent-registration.json` and
+`/llms.txt` answer. Still open: a paid anchor over MCP has run only on a local
+chain; `/proof?hash=` does not search the ETH contract in production (it is
+listed as `unsearched`) until `LOGS_API_KEY` is set; the live certificate
+page does not read the USDC contract, so certificate links for agent proofs
+need the web app rebuilt from branch `x402-usdc`; no hub registration is done.
 
 2026-10-02 — the x402 anchor worker is live at
 https://anchor.akashi-notari.com. A paid anchor from the official x402 client
@@ -127,6 +129,27 @@ hash travels as a 64-character lowercase hex string with no `0x` prefix.
 - confirm: none
 - needs: nothing; the Blockscout public API
 
+### anchorX402
+- does: write a file's SHA-256 hash on Base through the anchor worker, paid in USDC with x402; the agent needs no ETH and sends no transaction
+- call: `node --env-file=.test-wallet.env workers/anchor/scripts/pay.mjs <sha256hex> [filename]` — or any x402 client: `POST https://anchor.akashi-notari.com/anchor` with JSON `{ "hash", "filename" }`
+- input: `sha256hex` (string, 64 hex chars) · `filename` (string, optional; lowercase `a-z 0-9 - _ .`)
+- output: `{ "ok": true, "status": "confirmed", "hash", "filename", "submitter", "timestamp", "txHash", "explorerUrl", "certificateUrl" }`; without a payment the answer is `402` with the terms
+- writes: one transaction on Base to `0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3`; spends 0.01 USDC of the payer; the hash, the filename and the payer address become public and permanent
+- confirm: required — spends funds and publishes a permanent record
+- needs: a wallet with USDC on Base; for `pay.mjs`, its key as `TEST_WALLET_PRIVATE_KEY`
+
+### proofLookup
+- does: tell whether a hash was anchored through the agent flow and return its first proof, or read the proof written by a transaction
+- call: `curl -s "https://anchor.akashi-notari.com/proof?hash=<sha256hex>"` — or `?tx=<txHash>`
+- input: `sha256hex` (string, 64 hex chars) or `txHash` (string, `0x` + 64 hex)
+- output: `{ "hash", "anchored": true|false, "proofs": [ { "hash", "filename", "submitter", "timestamp", "txHash", "contract" } ], "searched": [addresses], "unsearched": [addresses] }`; a contract under `unsearched` was not checked, so `anchored: false` then means "not found where we looked"
+- writes: none
+- confirm: none
+- needs: nothing; 60 requests a minute per IP
+
+The same two actions are MCP tools at `https://anchor.akashi-notari.com/mcp`:
+`anchor_hash` and `find_proof`.
+
 ## Payments
 
 An agent pays in the chain's native token as `msg.value` of the `anchor`
@@ -140,14 +163,13 @@ client retries with a signed USDC authorization in `PAYMENT-SIGNATURE`, and
 the server returns the result. The anchor worker in `workers/anchor` speaks
 x402 v2 and settles each payment through `VerifierRegistryUSDC` in the same
 transaction as the anchor, with no facilitator. The same sale runs over MCP: the `anchor_hash`
-tool takes the payment in `_meta["x402/payment"]`. `POST /anchor` and `GET /proof`
-join the Interface once a paid anchor and the lookups are confirmed on mainnet
-against the new contract.
+tool takes the payment in `_meta["x402/payment"]`. `anchorX402` and `proofLookup` in the
+Interface are the HTTP form.
 
 ## Agent hubs
 
-Each hub reads something the anchor worker serves. All of it is in the repo;
-none of it is live until the worker is deployed.
+Each hub reads something the anchor worker serves. All of it is live; the
+registrations themselves are not done.
 
 - x402scan — reads `/openapi.json`, then `/.well-known/x402`, then probes `POST /anchor` for a `402`. Register the origin `https://anchor.akashi-notari.com`. Check first with `npx -y @agentcash/discovery anchor.akashi-notari.com -v`
 - MCP registries — `workers/anchor/server.json` names the remote server `io.github.self-reality/akashi-notari` at `https://anchor.akashi-notari.com/mcp`. Publish with `mcp-publisher login github` and `mcp-publisher publish` from `workers/anchor`
