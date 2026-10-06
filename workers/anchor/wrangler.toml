@@ -12,6 +12,8 @@ CHAIN_ID = "8453"
 # Address of VerifierRegistryUSDC, from contracts/registry/constants-usdc.json after deployment
 REGISTRY_ADDRESS = "0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3"
 RATE_LIMIT_PER_MIN = 60
+# ERC-8004 identity of this agent, served in /.well-known/agent-registration.json
+AGENT_REGISTRATIONS = '[{"agentId":98097,"agentRegistry":"eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"}]'
 
 [observability]
 enabled = true

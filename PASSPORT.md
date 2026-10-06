@@ -33,11 +33,12 @@ against that contract. A paid anchor from the official x402 client confirmed
 on Base mainnet for 0.01 USDC (tx `0x36ad32c8…268f7046`), and
 `GET /proof?hash=`, `GET /proof?tx=` and the MCP tool `find_proof` all return
 it. `/mcp`, `/.well-known/x402`, `/.well-known/agent-registration.json` and
-`/llms.txt` answer. Still open: a paid anchor over MCP has run only on a local
-chain; `/proof?hash=` does not search the ETH contract in production (it is
-listed as `unsearched`) until `LOGS_API_KEY` is set; the live certificate
-page does not read the USDC contract, so certificate links for agent proofs
-need the web app rebuilt from branch `x402-usdc`; no hub registration is done.
+`/llms.txt` answer. A paid anchor through the MCP tool `anchor_hash` confirmed
+as well (tx `0x02fdc536…fe56665db`). The agent is registered on the ERC-8004
+IdentityRegistry on Base as id `98097` (tx `0xa18e681b…70fbac01`), owned by
+`0xa88630300706488e9d31597ccC4394206F4D4C6C`. Still open: `/proof?hash=` does
+not search the ETH contract in production (it is listed as `unsearched`) until
+`LOGS_API_KEY` is set; x402scan and the MCP registry are not registered yet.
 
 2026-10-02 — the x402 anchor worker is live at
 https://anchor.akashi-notari.com. A paid anchor from the official x402 client
@@ -168,12 +169,11 @@ Interface are the HTTP form.
 
 ## Agent hubs
 
-Each hub reads something the anchor worker serves. All of it is live; the
-registrations themselves are not done.
+Each hub reads something the anchor worker serves, and all of it is live.
 
 - x402scan — reads `/openapi.json`, then `/.well-known/x402`, then probes `POST /anchor` for a `402`. Register the origin `https://anchor.akashi-notari.com`. Check first with `npx -y @agentcash/discovery anchor.akashi-notari.com -v`
 - MCP registries — `workers/anchor/server.json` names the remote server `io.github.self-reality/akashi-notari` at `https://anchor.akashi-notari.com/mcp`. Publish with `mcp-publisher login github` and `mcp-publisher publish` from `workers/anchor`
-- ERC-8004 agent registries — `cd contracts/registry && DEPLOYER_WALLET=1 SEND=1 pnpm hardhat run scripts/register-agent.js --network base` registers `https://anchor.akashi-notari.com/.well-known/agent-registration.json` on the IdentityRegistry (`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`); put the printed id into the worker's `AGENT_REGISTRATIONS` variable and deploy the worker
+- ERC-8004 agent registries — done: agent id `98097` on the Base IdentityRegistry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, pointing at `https://anchor.akashi-notari.com/.well-known/agent-registration.json`. `contracts/registry/scripts/register-agent.js` registers on another chain; add the new id to `AGENT_REGISTRATIONS` in `workers/anchor/wrangler.toml`
 - GitHub, Moltbook, agent forums and Discord — link this file and `https://anchor.akashi-notari.com/llms.txt`
 - x402 Bazaar — indexes endpoints whose payments Coinbase's facilitator settles; the anchor worker settles its own, so it is not listed there. The `402` still carries the Bazaar input schema, which x402scan needs
 - A2A — the worker does not speak A2A and serves no `/.well-known/agent-card.json`

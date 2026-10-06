@@ -42,7 +42,12 @@ async function main() {
     .find((event) => event && event.name === 'Transfer');
   const agentId = minted.args.tokenId;
   console.log('✅ Registered: agent id', agentId.toString(), `(tx ${tx.hash})`);
-  console.log('Owner:', await registry.ownerOf(agentId), '· URI:', await registry.tokenURI(agentId));
+  try {
+    console.log('Owner:', await registry.ownerOf(agentId), '· URI:', await registry.tokenURI(agentId));
+  } catch (_) {
+    // The node that answers may not have the new block yet; the registration itself is mined
+    console.log('Owner and URI are not readable yet; read them again in a few seconds.');
+  }
   console.log('AGENT_REGISTRATIONS =', JSON.stringify([{ agentId: Number(agentId), agentRegistry: `eip155:${chainId}:${IDENTITY_REGISTRY}` }]));
 }
 
