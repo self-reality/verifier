@@ -278,6 +278,21 @@ console.log('\nlookup');
   const both = await (await workerFetch(`${ORIGIN}/proof?hash=${HASH_A}`)).json();
   check('includes proofs from the ETH contract, earliest first', both.proofs.length === 2 && both.proofs[0].txHash === txA && both.proofs[1].currency === 'ETH', both);
 
+  check('names the contracts it searched', both.searched.length === 2 && both.searched[0] === registry.address && !('unsearched' in both), both);
+
+  await send(owner, usdc, 'mint', [stranger.address, PRICE]);
+  await send(stranger, usdc, 'approve', [registry.address, PRICE]);
+  await send(stranger, registry, 'anchor', [HASH_A, 'copy.pdf']);
+  const repeat = await (await workerFetch(`${ORIGIN}/proof?hash=${HASH_A}`)).json();
+  check('a later anchor of the same hash leaves the first proof in place', repeat.proofs[0].txHash === txA && repeat.proofs[0].submitter === payer.address, repeat);
+
+  // The explorer API that searches the ETH contract is unreachable
+  env.LOGS_API_URL = 'http://127.0.0.1:9/api';
+  const partial = await (await workerFetch(`${ORIGIN}/proof?hash=${HASH_A}`)).json();
+  check('a failed search of the ETH contract still answers from the registry', partial.anchored && partial.proofs.length === 1 && partial.proofs[0].txHash === txA, partial);
+  check('and names what it could not search', partial.unsearched.length === 1 && partial.unsearched[0] === legacy.address, partial);
+  env.LOGS_API_URL = '';
+
   check('rejects a malformed lookup', (await workerFetch(`${ORIGIN}/proof?hash=xyz`)).status === 400);
   const index = await (await workerFetch(`${ORIGIN}/`)).json();
   check('index describes the service and price', index.payment.price === PRICE.toString() && index.payment.payTo === registry.address);
@@ -285,6 +300,87 @@ console.log('\nlookup');
   const paid = openapi.paths['/anchor'].post;
   check('openapi.json marks /anchor as paid in USD', paid['x-payment-info'].price.amount === '0.500000' && '402' in paid.responses);
   check('and the free endpoints as open', openapi.paths['/proof'].get.security.length === 0 && Boolean(openapi.info['x-guidance']));
+}
+
+// ---------- discovery ----------
+
+console.log('\ndiscovery');
+{
+  const x402 = await (await workerFetch(`${ORIGIN}/.well-known/x402`)).json();
+  check('/.well-known/x402 lists the paid resource', x402.version === 1 && x402.resources.length === 1 && x402.resources[0] === `${ORIGIN}/anchor`, x402);
+  const agent = await (await workerFetch(`${ORIGIN}/.well-known/agent-registration.json`)).json();
+  const mcpService = agent.services.find((service) => service.name === 'MCP');
+  check('agent registration file names the MCP endpoint', agent.x402Support === true && mcpService.endpoint === `${ORIGIN}/mcp`, agent);
+  const llms = await workerFetch(`${ORIGIN}/llms.txt`);
+  const llmsText = await llms.text();
+  check('llms.txt is plain text with the price', llms.headers.get('content-type').startsWith('text/plain') && llmsText.includes('0.500000 USDC'), llmsText.slice(0, 200));
+}
+
+// ---------- MCP ----------
+
+console.log('\nmcp');
+{
+  let nextId = 1;
+  const rpc = async (method, params) => {
+    const res = await workerFetch(`${ORIGIN}/mcp`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: nextId++, method, params }),
+    });
+    return res.json();
+  };
+
+  const init = await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'e2e', version: '0' } });
+  check('initialize agrees on the protocol version', init.result.protocolVersion === '2025-06-18' && Boolean(init.result.capabilities.tools), init);
+  const future = await rpc('initialize', { protocolVersion: '2099-01-01', capabilities: {}, clientInfo: { name: 'e2e', version: '0' } });
+  check('an unknown version gets the newest supported one', future.result.protocolVersion === '2025-11-25', future);
+  const note = await workerFetch(`${ORIGIN}/mcp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }),
+  });
+  check('a notification gets 202 and no body', note.status === 202 && (await note.text()) === '');
+  check('GET is refused', (await workerFetch(`${ORIGIN}/mcp`)).status === 405);
+
+  const tools = (await rpc('tools/list')).result.tools;
+  check('lists find_proof and anchor_hash', tools.length === 2 && tools[0].name === 'find_proof' && tools[1].name === 'anchor_hash' && tools[1].inputSchema.required[0] === 'hash', tools);
+
+  const found = (await rpc('tools/call', { name: 'find_proof', arguments: { hash: HASH_A } })).result;
+  check('find_proof finds a proof by hash', !found.isError && found.structuredContent.anchored && found.structuredContent.proofs[0].txHash === txA, found);
+  check('with the same data as text', JSON.parse(found.content[0].text).proofs[0].txHash === txA);
+  const foundTx = (await rpc('tools/call', { name: 'find_proof', arguments: { tx: txA } })).result;
+  check('find_proof finds a proof by transaction', foundTx.structuredContent.proofs[0].hash === HASH_A, foundTx);
+  const empty = (await rpc('tools/call', { name: 'find_proof', arguments: {} })).result;
+  check('find_proof without arguments is a tool error', empty.isError === true, empty);
+
+  const HASH_M = sha(0x77);
+  const quote = (await rpc('tools/call', { name: 'anchor_hash', arguments: { hash: HASH_M } })).result;
+  const terms = quote.structuredContent;
+  check('anchor_hash without payment returns the x402 terms as a tool error', quote.isError === true && terms.x402Version === 2 && terms.accepts[0].amount === PRICE.toString() && terms.accepts[0].payTo === registry.address, quote);
+  check('in structuredContent and in text', JSON.parse(quote.content[0].text).accepts[0].payTo === registry.address);
+  const badHash = (await rpc('tools/call', { name: 'anchor_hash', arguments: { hash: 'nope' } })).result;
+  check('a bad hash is refused before any payment', badHash.isError === true && !badHash.structuredContent.accepts, badHash);
+
+  const before = await read(usdc, 'balanceOf', [registry.address]);
+  const signed = await signPayment(payer);
+  const paid = (await rpc('tools/call', { name: 'anchor_hash', arguments: { hash: HASH_M, filename: 'mcp.txt' }, _meta: { 'x402/payment': decode(signed.header) } })).result;
+  check('anchor_hash with a payment in _meta anchors the hash', !paid.isError && paid.structuredContent.status === 'confirmed' && paid.structuredContent.hash === HASH_M && paid.structuredContent.submitter === payer.address, paid);
+  const settlement = paid._meta['x402/payment-response'];
+  check('and returns the settlement in _meta', settlement.success && settlement.transaction === paid.structuredContent.txHash, settlement);
+  check('the payment reached the registry', (await read(usdc, 'balanceOf', [registry.address])) - before === PRICE);
+  const [submitter, , blockNumber] = await read(registry, 'firstAnchor', [HASH_M]);
+  check('the contract remembers the hash', submitter === payer.address && Number(blockNumber) === paid.structuredContent.blockNumber);
+
+  const replay = (await rpc('tools/call', { name: 'anchor_hash', arguments: { hash: sha(0x78) }, _meta: { 'x402/payment': decode(signed.header) } })).result;
+  check('a replayed payment is a tool error', replay.isError === true && replay.structuredContent.error === 'payment_already_used', replay);
+  const cheap = await signPayment(payer, { value: (PRICE - 1n).toString() });
+  const under = (await rpc('tools/call', { name: 'anchor_hash', arguments: { hash: sha(0x78) }, _meta: { 'x402/payment': decode(cheap.header) } })).result;
+  check('an underpayment returns the terms again', under.isError === true && under.structuredContent.error === 'invalid_exact_evm_payload_authorization_value_mismatch' && under.structuredContent.accepts.length === 1, under);
+
+  const unknownTool = await rpc('tools/call', { name: 'nope', arguments: {} });
+  check('an unknown tool is a protocol error', unknownTool.error.code === -32602, unknownTool);
+  const unknownMethod = await rpc('resources/list');
+  check('an unknown method is a protocol error', unknownMethod.error.code === -32601, unknownMethod);
 }
 
 console.log(`\n${passed} checks passed`);

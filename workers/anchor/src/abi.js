@@ -18,6 +18,17 @@ export const REGISTRY_ABI = [
   { type: 'function', name: 'price', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint256' }] },
   {
     type: 'function',
+    name: 'firstAnchor',
+    stateMutability: 'view',
+    inputs: [{ name: 'cid', type: 'string' }],
+    outputs: [
+      { name: 'submitter', type: 'address' },
+      { name: 'timestamp', type: 'uint256' },
+      { name: 'blockNumber', type: 'uint256' },
+    ],
+  },
+  {
+    type: 'function',
     name: 'settled',
     stateMutability: 'view',
     inputs: [

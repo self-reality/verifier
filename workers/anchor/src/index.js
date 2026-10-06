@@ -23,6 +23,8 @@ const MAX_TIMEOUT_SECONDS = 120;
 const MIN_VALIDITY_SECONDS = 6;
 // How far back to look for an authorization that was executed on the token directly
 const RECOVERY_LOOKBACK_BLOCKS = 1800n;
+// The explorer API that searches the ETH contract is optional; a slow answer must not hold up the lookup
+const LEGACY_SEARCH_TIMEOUT_MS = 4000;
 
 // Defaults per chain; every field can be overridden with an env var
 const NETWORKS = {
@@ -119,7 +121,7 @@ function corsHeaders() {
   return {
     'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET, POST, OPTIONS',
-    'access-control-allow-headers': 'content-type, payment-signature',
+    'access-control-allow-headers': 'content-type, accept, payment-signature, mcp-protocol-version, mcp-session-id',
     'access-control-expose-headers': 'payment-required, payment-response',
     'access-control-max-age': '600',
   };
@@ -157,6 +159,8 @@ function isRateLimited(ip, limit, windowMs) {
 
 // ---------- input ----------
 
+const TX_HASH = /^0x[0-9a-fA-F]{64}$/;
+
 // SHA-256 as 64 lowercase hex chars without 0x, the form the web app writes on-chain
 function normalizeHash(value) {
   if (typeof value !== 'string') return null;
@@ -187,6 +191,11 @@ async function getPrice(cfg, publicClient, fresh = false) {
   const value = await publicClient.readContract({ address: cfg.registry, abi: REGISTRY_ABI, functionName: 'price' });
   priceCache = { key, value, at: Date.now() };
   return value;
+}
+
+// The token has 6 decimals; 10000 units read as "0.010000"
+function usd(units) {
+  return `${units / 1_000_000n}.${(units % 1_000_000n).toString().padStart(6, '0')}`;
 }
 
 // ---------- x402 ----------
@@ -260,18 +269,22 @@ function bazaarExtension() {
   };
 }
 
-function paymentRequired(cfg, price, origin, error, settlement) {
-  const body = {
+function paymentRequiredBody(cfg, price, resourceUrl, error) {
+  return {
     x402Version: X402_VERSION,
     error,
     resource: {
-      url: `${cfg.publicUrl || origin}/anchor`,
+      url: resourceUrl,
       description: 'Proof of existence: write a SHA-256 file hash on-chain and get a certificate link',
       mimeType: 'application/json',
     },
     accepts: [paymentRequirements(cfg, price)],
     extensions: { bazaar: bazaarExtension() },
   };
+}
+
+function paymentRequired(cfg, price, origin, error, settlement) {
+  const body = paymentRequiredBody(cfg, price, `${cfg.publicUrl || origin}/anchor`, error);
   const headers = { 'payment-required': encodeHeader(body) };
   if (settlement) headers['payment-response'] = encodeHeader(settlement);
   return json(body, 402, headers);
@@ -493,50 +506,105 @@ function registries(cfg) {
   return [cfg.registry, cfg.legacyRegistry].filter(Boolean);
 }
 
-async function proofsByHash(cfg, publicClient, hash) {
-  const topics = encodeEventTopics({ abi: [ANCHORED_EVENT], eventName: 'Anchored', args: { cidIndex: hash } });
-  const proofs = [];
+// The registry stores the first anchor of each hash. Its block holds the event with the full proof,
+// so the lookup is one contract read and a one-block log query, which every RPC plan allows.
+async function firstProofs(cfg, publicClient, hash) {
+  const [, , blockNumber] = await publicClient.readContract({
+    address: cfg.registry,
+    abi: REGISTRY_ABI,
+    functionName: 'firstAnchor',
+    args: [hash],
+  });
+  if (blockNumber === 0n) return [];
+  const logs = await publicClient.getLogs({
+    address: cfg.registry,
+    event: ANCHORED_EVENT,
+    args: { cidIndex: hash },
+    fromBlock: blockNumber,
+    toBlock: blockNumber,
+  });
+  return logs.map((log) => toProof(cfg, getAddress(log.address), log.args, log.transactionHash, log.blockNumber));
+}
 
+// The ETH contract the web app writes to stores nothing, so its proofs need a search over the whole chain
+async function legacyProofs(cfg, publicClient, hash) {
+  const address = cfg.legacyRegistry;
   if (cfg.logsApi) {
-    // An explorer API searches the whole chain; public RPC nodes limit eth_getLogs to a short block range
-    for (const address of registries(cfg)) {
-      // LOGS_API_URL may already carry a query, e.g. Etherscan's ?chainid=8453
-      const url = new URL(cfg.logsApi);
-      const query = {
-        module: 'logs',
-        action: 'getLogs',
-        fromBlock: cfg.logsFromBlock.toString(),
-        toBlock: 'latest',
-        address,
-        topic0: topics[0],
-        topic1: topics[1],
-        topic0_1_opr: 'and',
-      };
-      for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
-      if (cfg.logsApiKey) url.searchParams.set('apikey', cfg.logsApiKey);
-      const res = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'akashi-notari-anchor/1.0' } });
-      if (!res.ok) throw new Error(`logs api ${res.status}`);
-      const data = await res.json();
-      const rows = Array.isArray(data.result) ? data.result : [];
-      for (const row of rows) {
-        const decoded = decodeEventLog({ abi: [ANCHORED_EVENT], data: row.data, topics: row.topics.filter(Boolean) });
-        proofs.push(toProof(cfg, getAddress(row.address), decoded.args, row.transactionHash, BigInt(row.blockNumber)));
-      }
-    }
-  } else {
-    const logs = await publicClient.getLogs({
-      address: registries(cfg),
-      event: ANCHORED_EVENT,
-      args: { cidIndex: hash },
-      fromBlock: cfg.logsFromBlock,
+    // An explorer API searches the whole chain; RPC nodes limit eth_getLogs to a short block range
+    const topics = encodeEventTopics({ abi: [ANCHORED_EVENT], eventName: 'Anchored', args: { cidIndex: hash } });
+    // LOGS_API_URL may already carry a query, e.g. Etherscan's ?chainid=8453
+    const url = new URL(cfg.logsApi);
+    const query = {
+      module: 'logs',
+      action: 'getLogs',
+      fromBlock: cfg.logsFromBlock.toString(),
       toBlock: 'latest',
+      address,
+      topic0: topics[0],
+      topic1: topics[1],
+      topic0_1_opr: 'and',
+    };
+    for (const [key, value] of Object.entries(query)) url.searchParams.set(key, value);
+    if (cfg.logsApiKey) url.searchParams.set('apikey', cfg.logsApiKey);
+    const res = await fetch(url, {
+      headers: { accept: 'application/json', 'user-agent': 'akashi-notari-anchor/1.0' },
+      signal: AbortSignal.timeout(LEGACY_SEARCH_TIMEOUT_MS),
     });
-    for (const log of logs) {
-      proofs.push(toProof(cfg, getAddress(log.address), log.args, log.transactionHash, log.blockNumber));
+    if (!res.ok) throw new Error(`logs api ${res.status}`);
+    const data = await res.json();
+    if (!Array.isArray(data.result)) throw new Error('logs api: no result');
+    return data.result.map((row) => {
+      const decoded = decodeEventLog({ abi: [ANCHORED_EVENT], data: row.data, topics: row.topics.filter(Boolean) });
+      return toProof(cfg, getAddress(row.address), decoded.args, row.transactionHash, BigInt(row.blockNumber));
+    });
+  }
+  const logs = await publicClient.getLogs({
+    address,
+    event: ANCHORED_EVENT,
+    args: { cidIndex: hash },
+    fromBlock: cfg.logsFromBlock,
+    toBlock: 'latest',
+  });
+  return logs.map((log) => toProof(cfg, getAddress(log.address), log.args, log.transactionHash, log.blockNumber));
+}
+
+// Returns { proofs, searched, unsearched }. A failed search of the ETH contract does not hide the
+// registry's answer; the contract is named in `unsearched` so the caller knows the result is partial.
+async function proofsByHash(cfg, publicClient, hash) {
+  const proofs = [];
+  const searched = [];
+  const unsearched = [];
+  if (cfg.registry) {
+    proofs.push(...(await firstProofs(cfg, publicClient, hash)));
+    searched.push(cfg.registry);
+  }
+  if (cfg.legacyRegistry) {
+    try {
+      proofs.push(...(await legacyProofs(cfg, publicClient, hash)));
+      searched.push(cfg.legacyRegistry);
+    } catch (err) {
+      console.error('legacy proof search failed', revertReason(err).slice(0, 300));
+      unsearched.push(cfg.legacyRegistry);
     }
   }
+  proofs.sort((a, b) => a.timestamp - b.timestamp);
+  return { proofs, searched, unsearched };
+}
 
-  return proofs.sort((a, b) => a.timestamp - b.timestamp);
+async function lookupByHash(cfg, publicClient, hash) {
+  const { proofs, searched, unsearched } = await proofsByHash(cfg, publicClient, hash);
+  const body = { hash, anchored: proofs.length > 0, proofs, searched };
+  if (unsearched.length > 0) body.unsearched = unsearched;
+  return body;
+}
+
+// Returns null when no endpoint knows the transaction
+async function lookupByTx(cfg, txHash) {
+  // Pruned nodes answer "not found" for old transactions, so each endpoint is asked until one has it
+  const receipt = await findReceipt(cfg, txHash);
+  if (!receipt) return null;
+  const proofs = proofsFromReceipt(cfg, receipt);
+  return { tx: txHash, anchored: proofs.length > 0, proofs };
 }
 
 function proofsFromReceipt(cfg, receipt) {
@@ -576,11 +644,22 @@ async function handleAnchor(request, env, origin) {
   } catch (_) {
     return json({ error: 'invalid_payload' }, 400);
   }
+
+  const sale = await sellAnchor(cfg, clients, price, hash, filename, payment, `${cfg.publicUrl || origin}/proof`);
+  if (sale.required) return paymentRequired(cfg, sale.price, origin, sale.required, sale.settlement);
+  const headers = sale.settlement ? { 'payment-response': encodeHeader(sale.settlement) } : {};
+  return json(sale.body, sale.status, headers);
+}
+
+// Check the payment, send the transaction and describe the outcome, for the HTTP and the MCP transport alike.
+// Returns { required: <x402 error>, price, settlement? } when a payment is still owed,
+// otherwise { status, body, settlement? }.
+async function sellAnchor(cfg, clients, price, hash, filename, payment, lookupUrl) {
   const checked = checkPayment(payment, cfg, price, Math.floor(Date.now() / 1000));
-  if (checked.error) return paymentRequired(cfg, price, origin, checked.error);
+  if (checked.error) return { required: checked.error, price };
   const { auth } = checked;
 
-  if (!clients.walletClient) return json({ error: 'Service is not configured' }, 503);
+  if (!clients.walletClient) return { status: 503, body: { error: 'Service is not configured' } };
 
   const failure = (errorReason) => ({ success: false, errorReason, transaction: '', network: cfg.network, payer: auth.from });
   let result;
@@ -588,23 +667,23 @@ async function handleAnchor(request, env, origin) {
     result = await settle(cfg, clients, hash, filename, auth);
   } catch (err) {
     console.error('anchor settle error', revertReason(err));
-    return json({ error: 'unexpected_settle_error' }, 500, { 'payment-response': encodeHeader(failure('unexpected_settle_error')) });
+    return { status: 500, body: { error: 'unexpected_settle_error' }, settlement: failure('unexpected_settle_error') };
   }
 
   if (result.error) {
     if (result.status === 402) {
       // The contract price may have changed since it was quoted
       const current = await getPrice(cfg, clients.publicClient, true);
-      return paymentRequired(cfg, current, origin, result.error, failure(result.error));
+      return { required: result.error, price: current, settlement: failure(result.error) };
     }
-    const extra = result.error === 'payment_already_used' ? { lookup: `${cfg.publicUrl || origin}/proof?hash=${hash}` } : {};
-    return json({ error: result.error, ...extra }, result.status, { 'payment-response': encodeHeader(failure(result.error)) });
+    const extra = result.error === 'payment_already_used' ? { lookup: `${lookupUrl}?hash=${hash}` } : {};
+    return { status: result.status, body: { error: result.error, ...extra }, settlement: failure(result.error) };
   }
 
   const { txHash, receipt } = result.sent;
   if (receipt && receipt.status !== 'success') {
     // Reverted on-chain: the payment reverted with it
-    return paymentRequired(cfg, price, origin, 'invalid_transaction_state', failure('invalid_transaction_state'));
+    return { required: 'invalid_transaction_state', price, settlement: failure('invalid_transaction_state') };
   }
   const settlement = {
     success: true,
@@ -613,11 +692,11 @@ async function handleAnchor(request, env, origin) {
     payer: auth.from,
     amount: auth.value.toString(),
   };
-  const headers = { 'payment-response': encodeHeader(settlement) };
   if (!receipt) {
     // Broadcast, but no endpoint has reported it mined yet
-    return json(
-      {
+    return {
+      status: 200,
+      body: {
         ok: true,
         status: 'submitted',
         hash,
@@ -629,14 +708,13 @@ async function handleAnchor(request, env, origin) {
         txHash,
         explorerUrl: cfg.explorer ? `${cfg.explorer}/tx/${txHash}` : null,
         certificateUrl: certificateUrl(cfg, txHash),
-        lookup: `${cfg.publicUrl || origin}/proof?tx=${txHash}`,
+        lookup: `${lookupUrl}?tx=${txHash}`,
       },
-      200,
-      headers
-    );
+      settlement,
+    };
   }
   const proof = proofsFromReceipt(cfg, receipt)[0];
-  return json({ ok: true, status: 'confirmed', ...proof }, 200, headers);
+  return { status: 200, body: { ok: true, status: 'confirmed', ...proof }, settlement };
 }
 
 async function handleProof(request, env) {
@@ -648,18 +726,15 @@ async function handleProof(request, env) {
   const txParam = url.searchParams.get('tx');
 
   if (txParam) {
-    if (!/^0x[0-9a-fA-F]{64}$/.test(txParam)) return json({ error: 'tx must be a transaction hash: 0x + 64 hex characters' }, 400);
-    // Pruned nodes answer "not found" for old transactions, so each endpoint is asked until one has it
-    const receipt = await findReceipt(cfg, txParam);
-    if (!receipt) return json({ tx: txParam, anchored: false, proofs: [] }, 404);
-    const proofs = proofsFromReceipt(cfg, receipt);
-    return json({ tx: txParam, anchored: proofs.length > 0, proofs }, proofs.length > 0 ? 200 : 404);
+    if (!TX_HASH.test(txParam)) return json({ error: 'tx must be a transaction hash: 0x + 64 hex characters' }, 400);
+    const found = await lookupByTx(cfg, txParam);
+    if (!found) return json({ tx: txParam, anchored: false, proofs: [] }, 404);
+    return json(found, found.anchored ? 200 : 404);
   }
 
   const hash = normalizeHash(hashParam);
   if (!hash) return json({ error: 'Expected ?hash=<sha256 hex> or ?tx=<transaction hash>' }, 400);
-  const proofs = await proofsByHash(cfg, publicClient, hash);
-  return json({ hash, anchored: proofs.length > 0, proofs }, 200, { 'cache-control': 'public, max-age=30' });
+  return json(await lookupByHash(cfg, publicClient, hash), 200, { 'cache-control': 'public, max-age=30' });
 }
 
 async function handleIndex(env, origin) {
@@ -680,12 +755,16 @@ async function handleIndex(env, origin) {
     payment: { protocol: 'x402', version: X402_VERSION, network: cfg.network, asset: cfg.token, price, payTo: cfg.registry },
     endpoints: {
       'POST /anchor': 'Paid. Body { "hash": "<sha256 hex>", "filename": "<optional>" }. Returns the transaction hash and a certificate link.',
-      'GET /proof?hash=<sha256 hex>': 'Free. Every proof of this hash, earliest first.',
+      'GET /proof?hash=<sha256 hex>': 'Free. Whether this hash is anchored, and its first proof.',
       'GET /proof?tx=<transaction hash>': 'Free. The proof written by this transaction.',
+      'POST /mcp': 'MCP server (Streamable HTTP). Tools: find_proof (free), anchor_hash (paid with x402).',
       'GET /openapi.json': 'Free. OpenAPI description of this service.',
+      'GET /.well-known/x402': 'Free. x402 discovery document.',
+      'GET /.well-known/agent-registration.json': 'Free. ERC-8004 agent registration file.',
+      'GET /llms.txt': 'Free. This service described for language models.',
       'GET /health': 'Free. Liveness.',
     },
-    endpointUrls: { anchor: `${base}/anchor`, proof: `${base}/proof` },
+    endpointUrls: { anchor: `${base}/anchor`, proof: `${base}/proof`, mcp: `${base}/mcp`, openapi: `${base}/openapi.json` },
   });
 }
 
@@ -696,9 +775,8 @@ async function handleOpenApi(env, origin) {
   let amount = '0.010000';
   if (cfg.registry && cfg.rpcUrl) {
     try {
-      // The token has 6 decimals; x-payment-info wants decimal USD
-      const price = await getPrice(cfg, getClients(cfg).publicClient);
-      amount = `${price / 1_000_000n}.${(price % 1_000_000n).toString().padStart(6, '0')}`;
+      // x-payment-info wants decimal USD
+      amount = usd(await getPrice(cfg, getClients(cfg).publicClient));
     } catch (_) {}
   }
   const proofSchema = {
@@ -725,11 +803,11 @@ async function handleOpenApi(env, origin) {
     openapi: '3.1.0',
     info: {
       title: 'Akashi Notari',
-      version: '1.0.0',
+      version: '1.1.0',
       description:
         'Proof of existence for any file. The SHA-256 hash is written on-chain on Base and the block time becomes the proof. The file never leaves its owner.',
       'x-guidance':
-        'Compute the SHA-256 of the file locally and POST /anchor with JSON { "hash": "<64 hex chars>", "filename": "<optional>" } to timestamp it on Base; pay with x402 (USDC on Base). The response holds txHash and certificateUrl, a page where a person can download a PDF certificate. Before paying, call GET /proof?hash=<64 hex chars> for free to see whether the hash is already anchored and when. Never send the file itself.',
+        'Compute the SHA-256 of the file locally and POST /anchor with JSON { "hash": "<64 hex chars>", "filename": "<optional>" } to timestamp it on Base; pay with x402 (USDC on Base). The response holds txHash and certificateUrl, a page where a person can download a PDF certificate. Before paying, call GET /proof?hash=<64 hex chars> for free to see whether the hash is already anchored and when. Never send the file itself. An MCP server with the same two actions is at /mcp.',
     },
     servers: [{ url: base }],
     paths: {
@@ -792,12 +870,21 @@ async function handleOpenApi(env, origin) {
           ],
           responses: {
             200: {
-              description: 'Whether the hash is anchored, and every proof, earliest first',
+              description: 'Whether the hash is anchored, and its proofs, earliest first',
               content: {
                 'application/json': {
                   schema: {
                     type: 'object',
-                    properties: { anchored: { type: 'boolean' }, proofs: { type: 'array', items: proofSchema } },
+                    properties: {
+                      anchored: { type: 'boolean' },
+                      proofs: { type: 'array', items: proofSchema },
+                      searched: { type: 'array', items: { type: 'string' }, description: 'Contracts that were searched' },
+                      unsearched: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Contracts that could not be searched this time; present only when the answer is partial',
+                      },
+                    },
                     required: ['anchored', 'proofs'],
                   },
                 },
@@ -816,6 +903,230 @@ async function handleOpenApi(env, origin) {
       },
     },
   });
+}
+
+
+// ---------- discovery ----------
+
+const SERVICE_DESCRIPTION =
+  'Proof of existence for any file. Send the SHA-256 hash; it is written on-chain on Base and the block time becomes the proof. The file never leaves its owner.';
+
+// The list x402 directories read when a site has no OpenAPI document, or next to it
+function handleX402Discovery(env, origin) {
+  const cfg = getConfig(env);
+  const base = cfg.publicUrl || origin;
+  return json({
+    version: 1,
+    x402Version: X402_VERSION,
+    resources: [`${base}/anchor`],
+    instructions: `POST ${base}/anchor with JSON { "hash": "<sha256, 64 hex chars>", "filename": "<optional>" }. GET ${base}/proof?hash=<sha256> is free. Full description: ${base}/openapi.json`,
+  });
+}
+
+// ERC-8004 registration file. AGENT_REGISTRATIONS holds the on-chain identities once the agent is registered.
+function handleAgentRegistration(env, origin) {
+  const cfg = getConfig(env);
+  const base = cfg.publicUrl || origin;
+  let registrations = [];
+  try {
+    registrations = JSON.parse(env.AGENT_REGISTRATIONS || '[]');
+  } catch (_) {}
+  return json({
+    type: 'https://eips.ethereum.org/EIPS/eip-8004#registration-v1',
+    name: 'Akashi Notari',
+    description: `${SERVICE_DESCRIPTION} One anchor is paid with x402 in USDC on Base; lookups are free.`,
+    services: [
+      { name: 'web', endpoint: 'https://akashi-notari.com/' },
+      { name: 'MCP', endpoint: `${base}/mcp`, version: MCP_VERSIONS[0] },
+      { name: 'OpenAPI', endpoint: `${base}/openapi.json`, version: '3.1.0' },
+    ],
+    x402Support: true,
+    active: true,
+    registrations,
+    supportedTrust: [],
+  });
+}
+
+async function handleLlmsTxt(env, origin) {
+  const cfg = getConfig(env);
+  const base = cfg.publicUrl || origin;
+  let price = 'see /';
+  if (cfg.registry && cfg.rpcUrl) {
+    try {
+      price = `${usd(await getPrice(cfg, getClients(cfg).publicClient))} USDC`;
+    } catch (_) {}
+  }
+  const text = `# Akashi Notari
+
+> ${SERVICE_DESCRIPTION}
+
+A proof shows that a file with this hash existed at the block time. It says nothing about the content or its legal validity. The hash, the filename and the payer's address become public and permanent.
+
+## Use
+
+- Compute the SHA-256 of the file locally. Never send the file.
+- [Check a hash](${base}/proof): GET /proof?hash=<64 hex chars>, free. Call it before paying.
+- [Anchor a hash](${base}/anchor): POST /anchor with JSON { "hash": "<64 hex chars>", "filename": "<optional>" }. Costs ${price} per anchor, paid with x402 on Base (${cfg.network}). The response holds txHash and certificateUrl.
+- [Read a proof by transaction](${base}/proof): GET /proof?tx=<transaction hash>, free.
+
+## Interfaces
+
+- [OpenAPI](${base}/openapi.json): the HTTP API
+- [MCP](${base}/mcp): Streamable HTTP server with the tools find_proof and anchor_hash
+- [x402 discovery](${base}/.well-known/x402)
+- [Agent registration](${base}/.well-known/agent-registration.json): ERC-8004
+
+## More
+
+- [Website](https://akashi-notari.com/): the same service for people, with PDF certificates
+- [Project card](https://github.com/self-reality/verifier/blob/main/PASSPORT.md): contract addresses and direct on-chain calls
+`;
+  return new Response(text, { headers: { 'content-type': 'text/plain; charset=utf-8', ...corsHeaders() } });
+}
+
+// ---------- MCP ----------
+
+// Newest first. The server holds no session, so every request stands alone.
+const MCP_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26'];
+const X402_PAYMENT_META = 'x402/payment';
+const X402_RESPONSE_META = 'x402/payment-response';
+
+const HASH_INPUT = { type: 'string', pattern: '^(0x)?[0-9a-fA-F]{64}$', description: 'SHA-256 of the file, 64 hex characters' };
+
+const MCP_TOOLS = [
+  {
+    name: 'find_proof',
+    title: 'Find a proof of existence',
+    description:
+      'Free. Look up whether a file hash is anchored on Base and when, or read the proof written by a transaction. Pass `hash` or `tx`. Call it before anchor_hash to avoid paying for a hash that is already anchored.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        hash: HASH_INPUT,
+        tx: { type: 'string', pattern: '^0x[0-9a-fA-F]{64}$', description: 'Transaction hash; use instead of hash' },
+      },
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  },
+  {
+    name: 'anchor_hash',
+    title: 'Anchor a file hash',
+    description:
+      'Paid with x402 (USDC on Base). Writes the SHA-256 hash of a file on-chain; the block time becomes the proof of existence. Compute the hash locally and never send the file. The hash, the filename and the payer address become public and permanent. Without a payment in _meta["x402/payment"] the result is the payment requirement.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        hash: HASH_INPUT,
+        filename: { type: 'string', maxLength: 128, description: 'Optional name to record with the hash: a-z 0-9 - _ .' },
+      },
+      required: ['hash'],
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+  },
+];
+
+function toolResult(value, isError = false, meta) {
+  const result = { content: [{ type: 'text', text: JSON.stringify(value) }], structuredContent: value };
+  if (isError) result.isError = true;
+  if (meta) result._meta = meta;
+  return result;
+}
+
+async function mcpFindProof(cfg, args) {
+  const { publicClient } = getClients(cfg);
+  if (args.tx !== undefined) {
+    if (typeof args.tx !== 'string' || !TX_HASH.test(args.tx)) {
+      return toolResult({ error: 'tx must be a transaction hash: 0x + 64 hex characters' }, true);
+    }
+    return toolResult((await lookupByTx(cfg, args.tx)) || { tx: args.tx, anchored: false, proofs: [] });
+  }
+  const hash = normalizeHash(args.hash);
+  if (!hash) return toolResult({ error: 'Pass hash (SHA-256, 64 hex characters) or tx (transaction hash)' }, true);
+  return toolResult(await lookupByHash(cfg, publicClient, hash));
+}
+
+// x402 over MCP: the payment travels in _meta, and a missing or refused payment is a tool error that carries the terms
+async function mcpAnchorHash(cfg, args, meta, origin) {
+  if (!cfg.registry || !cfg.token) return toolResult({ error: 'Service is not configured' }, true);
+  const hash = normalizeHash(args.hash);
+  if (!hash) return toolResult({ error: 'hash must be a SHA-256 digest: 64 hex characters' }, true);
+  const filename = normalizeFilename(args.filename);
+  if (filename === null) return toolResult({ error: 'filename may contain a-z 0-9 - _ . only' }, true);
+
+  const clients = getClients(cfg);
+  const price = await getPrice(cfg, clients.publicClient);
+  const required = (amount, error, settlement) =>
+    toolResult(
+      paymentRequiredBody(cfg, amount, 'mcp://tool/anchor_hash', error),
+      true,
+      settlement ? { [X402_RESPONSE_META]: settlement } : undefined
+    );
+
+  const payment = meta && meta[X402_PAYMENT_META];
+  if (!payment) return required(price, 'Payment required to anchor a hash');
+
+  const sale = await sellAnchor(cfg, clients, price, hash, filename, payment, `${cfg.publicUrl || origin}/proof`);
+  if (sale.required) return required(sale.price, sale.required, sale.settlement);
+  return toolResult(sale.body, sale.status !== 200, sale.settlement ? { [X402_RESPONSE_META]: sale.settlement } : undefined);
+}
+
+// Answers one JSON-RPC message; returns null for a notification
+async function mcpMessage(message, env, origin) {
+  const isRequest = message && typeof message === 'object' && message.id !== undefined && message.id !== null;
+  const reply = (result) => ({ jsonrpc: '2.0', id: message.id, result });
+  const fail = (code, text) => ({ jsonrpc: '2.0', id: isRequest ? message.id : null, error: { code, message: text } });
+
+  if (!message || message.jsonrpc !== '2.0' || typeof message.method !== 'string') return fail(-32600, 'Invalid Request');
+  if (!isRequest) return null;
+
+  const params = message.params || {};
+  switch (message.method) {
+    case 'initialize':
+      return reply({
+        protocolVersion: MCP_VERSIONS.includes(params.protocolVersion) ? params.protocolVersion : MCP_VERSIONS[0],
+        capabilities: { tools: {} },
+        serverInfo: { name: 'akashi-notari', title: 'Akashi Notari', version: '1.1.0' },
+        instructions:
+          'Proof of existence for files. Compute the SHA-256 of the file locally; never send the file. find_proof is free. anchor_hash costs a small USDC fee on Base, paid with x402.',
+      });
+    case 'ping':
+      return reply({});
+    case 'tools/list':
+      return reply({ tools: MCP_TOOLS });
+    case 'tools/call': {
+      const cfg = getConfig(env);
+      const args = params.arguments && typeof params.arguments === 'object' ? params.arguments : {};
+      try {
+        if (params.name === 'find_proof') return reply(await mcpFindProof(cfg, args));
+        if (params.name === 'anchor_hash') return reply(await mcpAnchorHash(cfg, args, params._meta, origin));
+      } catch (err) {
+        console.error('mcp tool error', { tool: params.name, msg: revertReason(err).slice(0, 500) });
+        return reply(toolResult({ error: 'Upstream error' }, true));
+      }
+      return fail(-32602, `Unknown tool: ${params.name}`);
+    }
+    default:
+      return fail(-32601, `Method not found: ${message.method}`);
+  }
+}
+
+async function handleMcp(request, env, origin) {
+  // No server-initiated stream: POST is the whole transport
+  if (request.method !== 'POST') {
+    return json({ jsonrpc: '2.0', id: null, error: { code: -32000, message: 'Use POST with a JSON-RPC message' } }, 405, { allow: 'POST, OPTIONS' });
+  }
+  let payload;
+  try {
+    payload = await request.json();
+  } catch (_) {
+    return json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }, 400);
+  }
+  if (Array.isArray(payload)) {
+    const replies = (await Promise.all(payload.map((message) => mcpMessage(message, env, origin)))).filter(Boolean);
+    return replies.length > 0 ? json(replies) : new Response(null, { status: 202, headers: corsHeaders() });
+  }
+  const answer = await mcpMessage(payload, env, origin);
+  return answer ? json(answer) : new Response(null, { status: 202, headers: corsHeaders() });
 }
 
 export default {
@@ -838,6 +1149,10 @@ export default {
       if (url.pathname === '/openapi.json') return await handleOpenApi(env, url.origin);
       if (url.pathname === '/anchor') return await handleAnchor(request, env, url.origin);
       if (url.pathname === '/proof') return await handleProof(request, env);
+      if (url.pathname === '/mcp') return await handleMcp(request, env, url.origin);
+      if (url.pathname === '/.well-known/x402') return handleX402Discovery(env, url.origin);
+      if (url.pathname === '/.well-known/agent-registration.json') return handleAgentRegistration(env, url.origin);
+      if (url.pathname === '/llms.txt') return await handleLlmsTxt(env, url.origin);
     } catch (err) {
       console.error('anchor worker error', { path: url.pathname, msg: revertReason(err) });
       return json({ error: 'Upstream error' }, 502);

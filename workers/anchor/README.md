@@ -5,9 +5,13 @@ Cloudflare Worker that sells anchors to agents over x402. An agent sends a SHA-2
 ## API Endpoints
 
 - `POST /anchor` → paid. Writes the hash on-chain, returns the transaction hash and a certificate link
-- `GET /proof?hash=<sha256 hex>` → free. Every proof of this hash, earliest first
+- `GET /proof?hash=<sha256 hex>` → free. Whether this hash is anchored, and its first proof
 - `GET /proof?tx=<transaction hash>` → free. The proof written by this transaction
+- `POST /mcp` → MCP server (Streamable HTTP) with the tools `find_proof` and `anchor_hash`
 - `GET /openapi.json` → OpenAPI description; directories such as x402scan read it before they register `/anchor`
+- `GET /.well-known/x402` → x402 discovery document listing `/anchor`
+- `GET /.well-known/agent-registration.json` → ERC-8004 agent registration file
+- `GET /llms.txt` → the service described for language models
 - `GET /` → service description and current price
 - `GET /health` → `{ ok: true }`
 
@@ -70,6 +74,31 @@ const res = await pay('https://<worker>/anchor', {
 });
 ```
 
+## GET /proof
+
+`VerifierRegistryUSDC` stores the first anchor of each hash, so a lookup by hash is one contract read (`firstAnchor`) and a log query on the one block it names. No search over the chain and no explorer key is needed.
+
+```json
+{
+  "hash": "be44340d…",
+  "anchored": true,
+  "proofs": [ { "hash": "…", "filename": "report.pdf", "submitter": "0x…", "timestamp": 1790919801, "txHash": "0x…", "contract": "0x…" } ],
+  "searched": ["<VerifierRegistryUSDC>", "<VerifierRegistry>"]
+}
+```
+
+- `proofs` holds the first anchor of the hash on `VerifierRegistryUSDC`. Later anchors of the same hash exist as events and open with `?tx=`
+- The ETH `VerifierRegistry` the web app writes to stores nothing, so its proofs need an explorer API. When that search fails, the contract moves from `searched` to `unsearched` and the rest of the answer still stands. `anchored: false` with an `unsearched` entry means "not found where we could look"
+
+## MCP
+
+`POST /mcp` speaks MCP over Streamable HTTP, without sessions: every request stands alone, and `GET` returns `405`.
+
+- `find_proof` `{ hash }` or `{ tx }`: free, the same answer as `GET /proof`
+- `anchor_hash` `{ hash, filename? }`: paid, following the x402 MCP transport. Without a payment the result is a tool error whose `structuredContent` is the x402 `PaymentRequired` object. The client signs it and calls again with the payment in `params._meta["x402/payment"]`; the result then carries the proof, and the settlement in `_meta["x402/payment-response"]`
+
+`server.json` in this folder describes the server for the MCP registry.
+
 ## Status Codes
 
 - `400` bad hash, filename or payment header. Checked before the payment is touched; nothing is charged
@@ -86,8 +115,8 @@ const res = await pay('https://<worker>/anchor', {
 - A canceled authorization buys nothing
 - The official x402 client refuses payments above $1 unless its user raises the limit; keep the price at or below $1 for agents to pay without configuration
 - Concurrent requests share one relayer key. A colliding nonce is retried three times; heavy traffic needs a queue
-- `/proof?hash=` searches through the Blockscout API, since public RPC nodes limit `eth_getLogs` to a short block range
-- Public RPC nodes and the keyless Blockscout API refuse or rate-limit requests from Cloudflare's shared addresses. In production set `RPC_URL` to a keyed endpoint and `LOGS_API_KEY` to an explorer API key, both as secrets
+- Public RPC nodes and the keyless Blockscout API refuse or rate-limit requests from Cloudflare's shared addresses. In production set `RPC_URL` to a keyed endpoint as a secret. `LOGS_API_KEY` is only needed to include the ETH contract's proofs in `/proof?hash=`
+- The recovery of an authorization executed on the token searches 1,800 blocks of token logs, which a free Alchemy key refuses (10 blocks). List a second endpoint in `RPC_URL` or use a paid key to keep that path working
 - Rate limited to `RATE_LIMIT_PER_MIN` requests per IP (default 60)
 
 ## Environment Variables
@@ -99,7 +128,8 @@ const res = await pay('https://<worker>/anchor', {
 - `RPC_ORIGIN`: sent as the `Origin` header on RPC calls, for a provider key restricted to an origin allowlist
 - `TOKEN_ADDRESS`, `TOKEN_NAME`, `TOKEN_VERSION`, `EXPLORER_URL`: optional overrides. `TOKEN_NAME` and `TOKEN_VERSION` are the token's EIP-712 domain
 - `LEGACY_REGISTRY_ADDRESS`: the ETH `VerifierRegistry`, included in lookups
-- `LOGS_API_URL`, `LOGS_API_KEY`, `LOGS_FROM_BLOCK`: Blockscout-compatible logs API for `/proof?hash=`, and an optional API key for it. Set `LOGS_API_URL` empty to use the RPC node
+- `LOGS_API_URL`, `LOGS_API_KEY`, `LOGS_FROM_BLOCK`: Blockscout-compatible logs API that searches the ETH contract for `/proof?hash=`, and an optional API key for it. Set `LOGS_API_URL` empty to use the RPC node
+- `AGENT_REGISTRATIONS`: JSON array for the `registrations` field of the agent registration file, e.g. `[{"agentId":22,"agentRegistry":"eip155:8453:0x…"}]`, set once the agent is registered on an ERC-8004 identity registry
 - `PUBLIC_URL`: the worker's public origin, used in the `resource.url` it advertises
 - `CERTIFICATE_URL`, `CERTIFICATE_CHAIN`: where certificate links point
 - `RATE_LIMIT_PER_MIN`: default 60
@@ -115,7 +145,7 @@ pnpm dev
 
 ## Tests
 
-The end-to-end script deploys a mock USDC and both registries to a local chain, then drives the worker by hand and through the official x402 client.
+The end-to-end script deploys a mock USDC and both registries to a local chain, then drives the worker by hand, through the official x402 client and over MCP.
 
 ```bash
 # terminal 1

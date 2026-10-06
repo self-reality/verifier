@@ -25,8 +25,17 @@ is deployed and verified on Base at
 `0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3`: price 0.01 USDC, relayer
 `0xf0E21361De4F97AdA748fDD1dD8dBbB698B7289e` allowed. `firstAnchor(hash)`
 returns submitter, time and block, so a lookup by hash is one contract read
-plus a one-block log query. No anchor has been made on it yet, and the anchor
-worker still points at `0xf738aD92…dF21`.
+plus a one-block log query. This is the contract for agents; the web app keeps
+writing to the ETH `VerifierRegistry`.
+
+2026-10-06 — the anchor worker in the repo points at that contract, answers
+`GET /proof?hash=` from `firstAnchor`, and serves an MCP endpoint (`/mcp`),
+`/.well-known/x402`, `/.well-known/agent-registration.json` and `/llms.txt`;
+65 end-to-end checks pass on a local chain. Not yet deployed: production
+still runs the 2026-10-02 build against `0xf738aD92…dF21`, where
+`/proof?hash=` fails. The live certificate page does not read the USDC
+contract either, so certificate links for agent proofs need the web app
+rebuilt from this branch.
 
 2026-10-02 — the x402 anchor worker is live at
 https://anchor.akashi-notari.com. A paid anchor from the official x402 client
@@ -130,17 +139,22 @@ x402 is the open standard for agent payments over HTTP: the server answers
 client retries with a signed USDC authorization in `PAYMENT-SIGNATURE`, and
 the server returns the result. The anchor worker in `workers/anchor` speaks
 x402 v2 and settles each payment through `VerifierRegistryUSDC` in the same
-transaction as the anchor, with no facilitator. `POST /anchor` and `GET /proof`
-join the Interface once a paid anchor and the lookups are confirmed on mainnet.
+transaction as the anchor, with no facilitator. The same sale runs over MCP: the `anchor_hash`
+tool takes the payment in `_meta["x402/payment"]`. `POST /anchor` and `GET /proof`
+join the Interface once a paid anchor and the lookups are confirmed on mainnet
+against the new contract.
 
 ## Agent hubs
 
-- GitHub — this file at https://github.com/self-reality/verifier is the card to link from any hub
-- Moltbook, agent forums and Discord — post the purpose paragraph and the `anchor` / `proofByHash` actions; the on-chain interface needs no listing approval
-- x402scan — registers a URL that answers `402` with an x402 schema; open once the anchor worker is deployed
-- x402 Bazaar — indexes endpoints whose payments Coinbase's facilitator settles; the anchor worker settles its own
-- MCP registries — list MCP servers; open once the actions are wrapped as MCP tools
-- ERC-8004 agent registries and A2A — read `/.well-known/agent-card.json`; the site serves none today
+Each hub reads something the anchor worker serves. All of it is in the repo;
+none of it is live until the worker is deployed.
+
+- x402scan — reads `/openapi.json`, then `/.well-known/x402`, then probes `POST /anchor` for a `402`. Register the origin `https://anchor.akashi-notari.com`. Check first with `npx -y @agentcash/discovery anchor.akashi-notari.com -v`
+- MCP registries — `workers/anchor/server.json` names the remote server `io.github.self-reality/akashi-notari` at `https://anchor.akashi-notari.com/mcp`. Publish with `mcp-publisher login github` and `mcp-publisher publish` from `workers/anchor`
+- ERC-8004 agent registries — register `https://anchor.akashi-notari.com/.well-known/agent-registration.json` as the agent URI on an identity registry, then put the returned id into the worker's `AGENT_REGISTRATIONS` variable
+- GitHub, Moltbook, agent forums and Discord — link this file and `https://anchor.akashi-notari.com/llms.txt`
+- x402 Bazaar — indexes endpoints whose payments Coinbase's facilitator settles; the anchor worker settles its own, so it is not listed there. The `402` still carries the Bazaar input schema, which x402scan needs
+- A2A — the worker does not speak A2A and serves no `/.well-known/agent-card.json`
 
 ## Files
 
@@ -149,7 +163,8 @@ join the Interface once a paid anchor and the lookups are confirmed on mainnet.
 - `contracts/registry/constants.json` — deployed addresses and fee bounds per network
 - `contracts/registry/contracts/VerifierRegistryUSDC.sol` — the USDC contract: `anchorWithAuthorization`, `anchor`, `anchorPaid`
 - `contracts/registry/constants-usdc.json` — deployed USDC contract addresses
-- `workers/anchor/README.md` — the x402 anchor API, its configuration and deployment steps
+- `workers/anchor/README.md` — the x402 and MCP anchor API, its configuration and deployment steps
+- `workers/anchor/server.json` — the MCP registry entry
 - `web/constants/VerifierRegistryABI.ts` — the ABI
 - `web/pages/index.tsx` — the web flow; `FEE_CENTS` sets the fee the app sends
 - `web/utils/txParser.ts` — how the certificate page decodes a proof
