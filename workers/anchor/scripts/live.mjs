@@ -53,6 +53,10 @@ check('agent registration names the MCP endpoint', agent.body?.services?.some((s
 const llms = await fetch(`${base}/llms.txt`);
 check('llms.txt is plain text', llms.status === 200 && llms.headers.get('content-type').startsWith('text/plain'), llms.status);
 
+const icon = await fetch(`${base}/favicon.svg`);
+check('serves a favicon', icon.status === 200 && icon.headers.get('content-type') === 'image/svg+xml', icon.status);
+check('openapi.json names a contact', Boolean(openapi.body?.info?.contact?.url), openapi.body?.info);
+
 console.log('\nhttp');
 const quote = await fetch(`${base}/anchor`, {
   method: 'POST',

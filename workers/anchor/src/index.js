@@ -804,6 +804,7 @@ async function handleOpenApi(env, origin) {
     info: {
       title: 'Akashi Notari',
       version: '1.1.0',
+      contact: { name: 'Akashi Notari', url: 'https://github.com/self-reality/verifier/issues' },
       description:
         'Proof of existence for any file. The SHA-256 hash is written on-chain on Base and the block time becomes the proof. The file never leaves its owner.',
       'x-guidance':
@@ -984,6 +985,16 @@ A proof shows that a file with this hash existed at the block time. It says noth
   return new Response(text, { headers: { 'content-type': 'text/plain; charset=utf-8', ...corsHeaders() } });
 }
 
+// A seal: directories show it next to the listing
+const FAVICON_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#27408b"/><circle cx="32" cy="32" r="17" fill="none" stroke="#fff" stroke-width="5"/><circle cx="32" cy="32" r="6" fill="#fff"/></svg>';
+
+function handleFavicon() {
+  return new Response(FAVICON_SVG, {
+    headers: { 'content-type': 'image/svg+xml', 'cache-control': 'public, max-age=86400', ...corsHeaders() },
+  });
+}
+
 // ---------- MCP ----------
 
 // Newest first. The server holds no session, so every request stands alone.
@@ -1153,6 +1164,7 @@ export default {
       if (url.pathname === '/.well-known/x402') return handleX402Discovery(env, url.origin);
       if (url.pathname === '/.well-known/agent-registration.json') return handleAgentRegistration(env, url.origin);
       if (url.pathname === '/llms.txt') return await handleLlmsTxt(env, url.origin);
+      if (url.pathname === '/favicon.svg' || url.pathname === '/favicon.ico') return handleFavicon();
     } catch (err) {
       console.error('anchor worker error', { path: url.pathname, msg: revertReason(err) });
       return json({ error: 'Upstream error' }, 502);
