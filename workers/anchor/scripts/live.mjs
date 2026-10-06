@@ -2,6 +2,7 @@
 //
 //   node scripts/live.mjs                                   read-only checks
 //   node --env-file=.test-wallet.env scripts/live.mjs --pay also buys one anchor (one price in USDC)
+//   node --env-file=.test-wallet.env scripts/live.mjs --mcp also buys one anchor through the MCP tool
 //
 // ANCHOR_URL overrides the default https://anchor.akashi-notari.com.
 
@@ -10,6 +11,7 @@ import { randomBytes } from 'node:crypto';
 const base = (process.env.ANCHOR_URL || 'https://anchor.akashi-notari.com').replace(/\/+$/, '');
 const network = process.env.ANCHOR_NETWORK || 'eip155:8453';
 const pay = process.argv.includes('--pay');
+const payMcp = process.argv.includes('--mcp');
 
 let failed = 0;
 function check(name, condition, detail) {
@@ -33,8 +35,9 @@ const rpc = async (method, params) => {
   return res.json();
 };
 
-// A hash nobody has anchored
+// Hashes nobody has anchored
 const fresh = randomBytes(32).toString('hex');
+const freshMcp = randomBytes(32).toString('hex');
 
 console.log(`${base}\n\ndiscovery`);
 const index = await getJson('/');
@@ -104,6 +107,58 @@ if (pay) {
   check('GET /proof?tx= finds it', byTx.body?.anchored && byTx.body.proofs[0].hash === fresh, byTx);
   const viaMcp = await rpc('tools/call', { name: 'find_proof', arguments: { hash: fresh } });
   check('find_proof finds it', viaMcp.result?.structuredContent?.proofs?.[0]?.txHash === proof.txHash, viaMcp);
+}
+
+if (payMcp) {
+  console.log('\npaid anchor over mcp');
+  if (!process.env.TEST_WALLET_PRIVATE_KEY) {
+    console.error('  TEST_WALLET_PRIVATE_KEY is not set; run with --env-file=.test-wallet.env');
+    process.exit(1);
+  }
+  const { privateKeyToAccount } = await import('viem/accounts');
+  const account = privateKeyToAccount(process.env.TEST_WALLET_PRIVATE_KEY);
+  const quoted = await rpc('tools/call', { name: 'anchor_hash', arguments: { hash: freshMcp, filename: 'live-check-mcp.txt' } });
+  const accepted = quoted.result.structuredContent.accepts[0];
+
+  // Sign the EIP-3009 authorization the terms ask for, as an x402 MCP client would
+  const now = Math.floor(Date.now() / 1000);
+  const authorization = {
+    from: account.address,
+    to: accepted.payTo,
+    value: accepted.amount,
+    validAfter: '0',
+    validBefore: String(now + accepted.maxTimeoutSeconds),
+    nonce: `0x${randomBytes(32).toString('hex')}`,
+  };
+  const signature = await account.signTypedData({
+    domain: {
+      name: accepted.extra.name,
+      version: accepted.extra.version,
+      chainId: Number(accepted.network.split(':')[1]),
+      verifyingContract: accepted.asset,
+    },
+    types: {
+      TransferWithAuthorization: [
+        { name: 'from', type: 'address' },
+        { name: 'to', type: 'address' },
+        { name: 'value', type: 'uint256' },
+        { name: 'validAfter', type: 'uint256' },
+        { name: 'validBefore', type: 'uint256' },
+        { name: 'nonce', type: 'bytes32' },
+      ],
+    },
+    primaryType: 'TransferWithAuthorization',
+    message: { ...authorization, value: BigInt(authorization.value), validAfter: 0n, validBefore: BigInt(authorization.validBefore) },
+  });
+  const paid = await rpc('tools/call', {
+    name: 'anchor_hash',
+    arguments: { hash: freshMcp, filename: 'live-check-mcp.txt' },
+    _meta: { 'x402/payment': { x402Version: 2, accepted, payload: { signature, authorization } } },
+  });
+  const proof = paid.result?.structuredContent;
+  check('anchor_hash with a payment in _meta anchors the hash', !paid.result?.isError && proof?.hash === freshMcp && proof.submitter === account.address, paid);
+  check('and returns the settlement', paid.result?._meta?.['x402/payment-response']?.success === true, paid.result?._meta);
+  console.log(`    ${proof?.status} · tx ${proof?.txHash}\n    ${proof?.explorerUrl}`);
 }
 
 console.log(failed === 0 ? '\nall checks passed' : `\n${failed} checks failed`);

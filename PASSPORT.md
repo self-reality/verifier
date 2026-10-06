@@ -173,7 +173,7 @@ registrations themselves are not done.
 
 - x402scan — reads `/openapi.json`, then `/.well-known/x402`, then probes `POST /anchor` for a `402`. Register the origin `https://anchor.akashi-notari.com`. Check first with `npx -y @agentcash/discovery anchor.akashi-notari.com -v`
 - MCP registries — `workers/anchor/server.json` names the remote server `io.github.self-reality/akashi-notari` at `https://anchor.akashi-notari.com/mcp`. Publish with `mcp-publisher login github` and `mcp-publisher publish` from `workers/anchor`
-- ERC-8004 agent registries — register `https://anchor.akashi-notari.com/.well-known/agent-registration.json` as the agent URI on an identity registry, then put the returned id into the worker's `AGENT_REGISTRATIONS` variable
+- ERC-8004 agent registries — `cd contracts/registry && DEPLOYER_WALLET=1 SEND=1 pnpm hardhat run scripts/register-agent.js --network base` registers `https://anchor.akashi-notari.com/.well-known/agent-registration.json` on the IdentityRegistry (`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`); put the printed id into the worker's `AGENT_REGISTRATIONS` variable and deploy the worker
 - GitHub, Moltbook, agent forums and Discord — link this file and `https://anchor.akashi-notari.com/llms.txt`
 - x402 Bazaar — indexes endpoints whose payments Coinbase's facilitator settles; the anchor worker settles its own, so it is not listed there. The `402` still carries the Bazaar input schema, which x402scan needs
 - A2A — the worker does not speak A2A and serves no `/.well-known/agent-card.json`
