@@ -49,8 +49,10 @@ Already have a transaction? Open the Certificate page at https://akashi-notari.c
   Explorer: https://optimistic.etherscan.io/address/0x859Fe07D2995875319b7e65592812392B16BBADe#code
 
 `VerifierRegistryUSDC` takes payment in USDC instead of ETH. Agents reach it over x402 at https://anchor.akashi-notari.com (see [workers/anchor](workers/anchor/README.md)); one anchor costs 0.01 USDC.
-- Base: `0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21`  
+- Base: `0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21` (the anchor worker uses this one today)  
   Explorer: https://basescan.org/address/0xf738aD9256bf20C2Da3a5F1142D4e8549785dF21#code
+- Base, next version: `0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3`. It also stores the first anchor of each hash, so `firstAnchor(hash)` answers whether a file was notarised without a log search. The worker moves to it next.  
+  Explorer: https://basescan.org/address/0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3#code
 
 ### Privacy & security
 - Your document never leaves your device. Only the derived hash and transaction data are recorded on‑chain.

@@ -168,6 +168,98 @@ describe('VerifierRegistryUSDC', function () {
     });
   });
 
+  describe('records', function () {
+    const KEY = ethers.keccak256(ethers.toUtf8Bytes(HASH));
+
+    it('answers zeros for a hash that was never anchored', async function () {
+      const { registry } = await deploy();
+      expect(await registry.firstAnchor(HASH)).to.deep.equal([ethers.ZeroAddress, 0n, 0n]);
+      expect(await registry.records(KEY)).to.deep.equal([ethers.ZeroAddress, 0n, 0n]);
+    });
+
+    it('remembers the first anchor: payer, block time and block number', async function () {
+      const { payer, relayer, usdc, registry } = await deploy();
+      const a = await authorize(usdc, payer, registry.target, PRICE);
+      const receipt = await (await registry.connect(relayer).anchorWithAuthorization(HASH, FILENAME, toAuth(a))).wait();
+      const block = await ethers.provider.getBlock(receipt.blockNumber);
+
+      const expected = [payer.address, BigInt(block.timestamp), BigInt(receipt.blockNumber)];
+      expect(await registry.firstAnchor(HASH)).to.deep.equal(expected);
+      // The mapping key is the event's indexed topic
+      expect(await registry.records(anchoredEvent(receipt, registry).topics[1])).to.deep.equal(expected);
+    });
+
+    it('leads to the full proof with a one-block log query', async function () {
+      const { payer, relayer, usdc, registry } = await deploy();
+      const a = await authorize(usdc, payer, registry.target, PRICE);
+      const receipt = await (await registry.connect(relayer).anchorWithAuthorization(HASH, FILENAME, toAuth(a))).wait();
+
+      const [, , blockNumber] = await registry.firstAnchor(HASH);
+      const logs = await registry.queryFilter(registry.filters.Anchored(HASH), Number(blockNumber), Number(blockNumber));
+      expect(logs).to.have.lengthOf(1);
+      expect(logs[0].transactionHash).to.equal(receipt.hash);
+      expect(logs[0].args.cid).to.equal(HASH);
+      expect(logs[0].args.filename).to.equal(FILENAME);
+    });
+
+    it('keeps the first record when the same hash is anchored again', async function () {
+      const { payer, stranger, relayer, usdc, registry } = await deploy();
+      const a = await authorize(usdc, payer, registry.target, PRICE);
+      await registry.connect(relayer).anchorWithAuthorization(HASH, FILENAME, toAuth(a));
+      const first = await registry.firstAnchor(HASH);
+
+      await usdc.mint(stranger.address, PRICE);
+      await usdc.connect(stranger).approve(registry.target, PRICE);
+      await expect(registry.connect(stranger).anchor(HASH, 'copy.pdf')).to.emit(registry, 'Anchored');
+      expect(await registry.firstAnchor(HASH)).to.deep.equal(first);
+      expect(first[0]).to.equal(payer.address);
+    });
+
+    it('keeps separate records per hash', async function () {
+      const { payer, usdc, registry } = await deploy();
+      await usdc.connect(payer).approve(registry.target, PRICE * 2n);
+      await registry.connect(payer).anchor(HASH, FILENAME);
+      await registry.connect(payer).anchor('other-hash', FILENAME);
+      const [, , blockA] = await registry.firstAnchor(HASH);
+      const [submitterB, , blockB] = await registry.firstAnchor('other-hash');
+      expect(submitterB).to.equal(payer.address);
+      expect(blockB).to.equal(blockA + 1n);
+    });
+
+    it('records through anchor and anchorPaid too, with the payer as submitter', async function () {
+      const { payer, relayer, stranger, usdc, registry } = await deploy();
+      await usdc.connect(payer).approve(registry.target, PRICE);
+      await registry.connect(payer).anchor(HASH, FILENAME);
+      expect((await registry.firstAnchor(HASH))[0]).to.equal(payer.address);
+
+      const a = await authorize(usdc, payer, registry.target, PRICE);
+      await usdc.connect(stranger).transferWithAuthorization(a.from, a.to, a.value, a.validAfter, a.validBefore, a.nonce, a.signature);
+      const receipt = await (await registry.connect(relayer).anchorPaid('paid-hash', FILENAME, payer.address, PRICE, a.nonce)).wait();
+      expect(await registry.firstAnchor('paid-hash')).to.deep.equal([
+        payer.address,
+        BigInt((await ethers.provider.getBlock(receipt.blockNumber)).timestamp),
+        BigInt(receipt.blockNumber),
+      ]);
+    });
+
+    it('writes no record when the payment fails', async function () {
+      const { payer, relayer, usdc, registry } = await deploy();
+      const a = await authorize(usdc, payer, registry.target, PRICE, { validBefore: 1n });
+      await expect(registry.connect(relayer).anchorWithAuthorization(HASH, FILENAME, toAuth(a))).to.be.reverted;
+      expect((await registry.firstAnchor(HASH))[1]).to.equal(0n);
+    });
+
+    it('reports the gas of a first anchor and of a repeat', async function () {
+      const { payer, relayer, usdc, registry } = await deploy();
+      const a = await authorize(usdc, payer, registry.target, PRICE);
+      const first = await (await registry.connect(relayer).anchorWithAuthorization(HASH, FILENAME, toAuth(a))).wait();
+      const b = await authorize(usdc, payer, registry.target, PRICE);
+      const repeat = await (await registry.connect(relayer).anchorWithAuthorization(HASH, FILENAME, toAuth(b))).wait();
+      console.log('      first anchor gas:', first.gasUsed.toString(), '· repeat anchor gas:', repeat.gasUsed.toString());
+      expect(first.gasUsed).to.be.greaterThan(repeat.gasUsed);
+    });
+  });
+
   it('anchors with an allowance', async function () {
     const { payer, usdc, registry } = await deploy();
     await usdc.connect(payer).approve(registry.target, PRICE);

@@ -150,6 +150,8 @@ This script will:
 - `anchorWithAuthorization(cid, filename, auth)`: pulls the USDC with a signed EIP-3009 authorization addressed to the contract and emits the proof in one transaction. Callable by the payer or by an allowed relayer. This is what the anchor worker (`workers/anchor`) calls for x402 payments.
 - `anchor(cid, filename)`: pays `price` from an allowance.
 - `anchorPaid(cid, filename, from, value, nonce)`: relayer only. Anchors against an authorization that was already executed on the token.
+- `firstAnchor(cid)`: view. Returns the submitter, block time and block number of the first anchor of `cid`, or zeros if there is none. `records(keccak256(cid))` reads the same slot; the key equals topic 1 of the `Anchored` event, so the full proof is the log with that topic in the returned block.
+- Later anchors of the same `cid` emit the event and leave the record unchanged. A first anchor costs about 37,000 more gas than a repeat.
 - `setPrice`, `setRelayer`, `withdraw(token, to)`: owner only.
 
 The token address and price per network live under `usdc` in `scripts/config.json` (price in token units: `500000` = 0.50 USDC).

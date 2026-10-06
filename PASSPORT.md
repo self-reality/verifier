@@ -4,7 +4,7 @@ project: akashi-notari
 name: Akashi Notari
 path: /Volumes/Smartbuy/Projects/Akashi Notary/Verifier
 status: active
-updated: 2026-10-02
+updated: 2026-10-06
 site: https://akashi-notari.com/
 repo: https://github.com/self-reality/verifier
 ---
@@ -19,6 +19,14 @@ https://akashi-notari.com/; agents call the contract directly with any EVM
 wallet.
 
 ## Status
+
+2026-10-06 — a `VerifierRegistryUSDC` that stores the first anchor of each hash
+is deployed and verified on Base at
+`0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3`: price 0.01 USDC, relayer
+`0xf0E21361De4F97AdA748fDD1dD8dBbB698B7289e` allowed. `firstAnchor(hash)`
+returns submitter, time and block, so a lookup by hash is one contract read
+plus a one-block log query. No anchor has been made on it yet, and the anchor
+worker still points at `0xf738aD92…dF21`.
 
 2026-10-02 — the x402 anchor worker is live at
 https://anchor.akashi-notari.com. A paid anchor from the official x402 client
