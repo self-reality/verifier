@@ -1,0 +1,19 @@
+{
+  "rpc": "https://mainnet.base.org",
+  "price": "https://price-feed.akashi-notari.com/api/usd-to-amount?ticker=ETH",
+  "explorer": "https://basescan.org",
+  "usdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "relayer": "0xf0E21361De4F97AdA748fDD1dD8dBbB698B7289e",
+  "registry": "0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3",
+  "legacyRegistry": "0xeed9D0f7265892e84e43d05dA464c75add199260",
+  "scanFrom": 52000000,
+  "wallets": [
+    {"label": "Relayer", "address": "0xf0E21361De4F97AdA748fDD1dD8dBbB698B7289e", "role": "sends every x402 anchor and pays its gas"},
+    {"label": "Owner", "address": "0xa88630300706488e9d31597ccC4394206F4D4C6C", "role": "owns both registries and agent 98097"},
+    {"label": "Registry (USDC)", "address": "0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3", "role": "collects the 0.01 USDC per anchor until withdrawn"},
+    {"label": "Registry (ETH, web app)", "address": "0xeed9D0f7265892e84e43d05dA464c75add199260", "role": "holds the web app's ETH fees until withdrawn"}
+  ],
+  "ownPayers": ["0xc3b7aed3536fcbfce0f6a2da7544138a797e7aa4"],
+  "ownPayersNote": "0xc3b7…: paid the two test anchors the passport records on 2026-10-06 (0x36ad…, 0x02fd…). Add a wallet here once its anchors are known to be ours.",
+  "lowAnchors": 20
+}

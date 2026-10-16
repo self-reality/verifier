@@ -4,7 +4,7 @@ project: akashi-notari
 name: Akashi Notari
 path: /Volumes/Smartbuy/Projects/Akashi Notary/Verifier
 status: active
-updated: 2026-10-06
+updated: 2026-10-16
 site: https://akashi-notari.com/
 repo: https://github.com/self-reality/verifier
 ---
@@ -76,8 +76,18 @@ contract is ETH sent with the call. No MCP server or agent card yet.
 | Apply the price or relayer from `scripts/config.json` | `cd contracts/registry && pnpm hardhat run scripts/manage-usdc.js --network <network>` |
 | Deploy the contract | `cd contracts/registry && pnpm hardhat run scripts/deploy.js --network <network>` |
 | Change fee bounds or owner | `cd contracts/registry && npx hardhat run scripts/manage.js --network <network>` |
+| Balances, relayer runway, anchors and customers | `node ops/status.mjs` — the wallets and own payers it knows are in `ops/watch.json` |
 
 ## Interface
+
+### status
+- does: report the service from Base — the balances of the wallets in `ops/watch.json`, how many anchors the relayer's ETH still pays gas for, every relayed anchor with its payer, and the payers outside `ownPayers` (customers)
+- call: `node ops/status.mjs`
+- input: none; `ops/watch.json` names the wallets, the own payers and `lowAnchors`, the runway that raises a warning
+- output: one JSON line `{ ok, result: { wallets: [{label, address, eth, usdc}], ethUsd, relayer: {feePerAnchorEth, anchorsLeft, gasPriceGwei, sample}, anchors: [{at, hash, payer, own, feeWei}], customers, legacy: {eth, before, rose}, warnings } }`. The fee per anchor is the recent anchors' average gas at today's gas price plus their average L1 data fee
+- writes: `ops/cache/status.json` only (ignored by git) — the relayer transactions already found and the web-app registry's last balance
+- confirm: none
+- needs: nothing but a network connection; keyless, no dependencies. Public RPCs refuse `eth_getLogs` ranges, so it finds the relayer's transactions by binary search over its nonce (about 25 calls each, once); web-app anchors pay the ETH registry directly and show only as a rise in its balance since the previous run
 
 The actions below target Base mainnet (chain id 8453), contract
 `0xeed9D0f7265892e84e43d05dA464c75add199260`. Ethereum uses the same address,
