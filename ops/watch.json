@@ -13,7 +13,7 @@
     {"label": "Registry (USDC)", "address": "0xe0C6bB0914be3E49e13fFBc389cF659871a1bCD3", "role": "collects the 0.01 USDC per anchor until withdrawn"},
     {"label": "Registry (ETH, web app)", "address": "0xeed9D0f7265892e84e43d05dA464c75add199260", "role": "holds the web app's ETH fees until withdrawn"}
   ],
-  "ownPayers": ["0xc3b7aed3536fcbfce0f6a2da7544138a797e7aa4"],
-  "ownPayersNote": "0xc3b7…: paid the two test anchors the passport records on 2026-10-06 (0x36ad…, 0x02fd…). Add a wallet here once its anchors are known to be ours.",
+  "ownPayers": ["0xc3b7aed3536fcbfce0f6a2da7544138a797e7aa4", "0x8e5b627b6b19d45623cc4a47f32ea588e158d405"],
+  "ownPayersNote": "0xc3b7…: paid the two test anchors the passport records on 2026-10-06 (0x36ad…, 0x02fd…). 0x8e5b…: paid 0xa660… the same day, ours (Petr, 2026-10-16). Add a wallet here once its anchors are known to be ours.",
   "lowAnchors": 20
 }
